@@ -3,7 +3,9 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := app-template
+PROJECT_NAME := aws-iot
+
+SRCDIRS := project/src
 
 include $(IDF_PATH)/make/project.mk
 
