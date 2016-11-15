@@ -5,7 +5,5 @@
 
 PROJECT_NAME := aws-iot
 
-SRCDIRS := project/src
-
 include $(IDF_PATH)/make/project.mk
 
