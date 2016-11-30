@@ -10,6 +10,8 @@ PROJECT_ROOT := ../..
 OPENCXA_ROOT := $(PROJECT_ROOT)/externals/openCXA-common
 
 
+COMPONENT_DEPENDS := freertos
+
 
 COMPONENT_ADD_INCLUDEDIRS := \
 		$(PROJECT_ROOT)/project/include \
@@ -43,5 +45,3 @@ COMPONENT_SRCDIRS := \
 		$(OPENCXA_ROOT)/src/serial \
 		$(OPENCXA_ROOT)/src/stateMachine \
 		$(OPENCXA_ROOT)/src/timeUtils
-
-include $(IDF_PATH)/make/component_common.mk

@@ -17,5 +17,3 @@ COMPONENT_ADD_INCLUDEDIRS := \
 
 COMPONENT_SRCDIRS := \
 		$(PROJECT_ROOT)/project/src
-
-include $(IDF_PATH)/make/component_common.mk
