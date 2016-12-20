@@ -26,6 +26,7 @@
 #include <cxa_assert.h>
 #include <cxa_console.h>
 #include <cxa_delay.h>
+#include <cxa_esp32_btle_client.h>
 #include <cxa_esp32_gpio.h>
 #include <cxa_esp32_timeBase.h>
 #include <cxa_esp32_usart.h>
@@ -57,7 +58,7 @@ static cxa_mqtt_rpc_methodRetVal_t mqttRpcCb_onSetLed(cxa_mqtt_rpc_node_t *const
 		cxa_linkedField_t *const paramsIn, cxa_linkedField_t *const returnParamsOut,
 		void* userVarIn);
 
-static void consoleCb_rpcNotify(cxa_ioStream_t *const ioStreamIn, void* userVarIn);
+static void consoleCb_rpcNotify(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn);
 
 
 // ******** local variable declarations ********
@@ -103,7 +104,7 @@ static void sysInit()
 
 	// XXX/->setLed/0000
 	cxa_mqtt_rpc_node_addMethod(&rpcNode_root.super, "setLed", mqttRpcCb_onSetLed, NULL);
-	cxa_console_addCommand("rpc_notify", consoleCb_rpcNotify, NULL);
+	cxa_console_addCommand("rpc_notify", "sends a notification to the server", NULL, 0, consoleCb_rpcNotify, NULL);
 
 	// schedule our user task for execution
 	xTaskCreate(userTask, (const char * const)"usrTask", 4096, NULL, tskIDLE_PRIORITY, NULL);
@@ -135,7 +136,7 @@ static cxa_mqtt_rpc_methodRetVal_t mqttRpcCb_onSetLed(cxa_mqtt_rpc_node_t *const
 }
 
 
-static void consoleCb_rpcNotify(cxa_ioStream_t *const ioStreamIn, void* userVarIn)
+static void consoleCb_rpcNotify(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn)
 {
 	uint8_t ledState = cxa_gpio_getValue(&gpio_led.super);
 	cxa_mqtt_rpc_node_publishNotification(&rpcNode_root.super, "ledStatus", CXA_MQTT_QOS_ATMOST_ONCE, &ledState, sizeof(ledState));

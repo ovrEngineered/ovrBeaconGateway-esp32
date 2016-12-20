@@ -17,6 +17,7 @@ COMPONENT_ADD_INCLUDEDIRS := \
 		$(PROJECT_ROOT)/project/include \
 		$(OPENCXA_ROOT)/include/arch-common \
 		$(OPENCXA_ROOT)/include/arch-esp32 \
+		$(OPENCXA_ROOT)/include/btle \
 		$(OPENCXA_ROOT)/include/collections \
 		$(OPENCXA_ROOT)/include/console \
 		$(OPENCXA_ROOT)/include/logger \
@@ -35,6 +36,7 @@ COMPONENT_ADD_INCLUDEDIRS := \
 COMPONENT_SRCDIRS := \
 		$(OPENCXA_ROOT)/src/arch-common \
 		$(OPENCXA_ROOT)/src/arch-esp32 \
+		$(OPENCXA_ROOT)/src/btle \
 		$(OPENCXA_ROOT)/src/collections \
 		$(OPENCXA_ROOT)/src/console \
 		$(OPENCXA_ROOT)/src/logger \
