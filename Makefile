@@ -3,7 +3,6 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := aws-iot
+PROJECT_NAME := ovrBeaconGateway
 
 include $(IDF_PATH)/make/project.mk
-
