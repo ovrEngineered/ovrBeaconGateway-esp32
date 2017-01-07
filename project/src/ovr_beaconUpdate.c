@@ -53,10 +53,34 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 	updateIn->status.isEnumerating = status_raw & (1 << 7);
 	updateIn->status.needsPoll = status_raw & (1 << 6);
 
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 19, updateIn->batt_pcnt) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 19, updateIn->batt_pcnt100) ) return false;
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 20, updateIn->currTemp_c) ) return false;
 
 	return true;
+}
+
+
+uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->batt_pcnt100;
+}
+
+
+int8_t ovr_beaconUpdate_getRssi(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->rssi_dBm;
+}
+
+
+uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->currTemp_c;
 }
 
 

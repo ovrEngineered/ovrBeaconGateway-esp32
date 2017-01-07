@@ -28,6 +28,7 @@
 
 // ******** local macro definitions ********
 #define COMPANY_ID				0xFFFF
+#define SCAN_CHECK_PERIOD_MS	10000
 
 
 // ******** local type definitions ********
@@ -36,6 +37,10 @@
 // ******** local function prototypes ********
 static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn);
 static void pruneLostProxies(ovr_beaconManager_t *const bmIn);
+
+static void notifyListeners_onFound(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn);
+static void notifyListeners_onUpdate(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn);
+static void notifyListeners_onLost(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn);
 
 static void cb_onRunLoopUpdate(void* userVarIn);
 static void btleCb_onAdvertRx(cxa_btle_advPacket_t* packetIn, void* userVarIn);
@@ -47,24 +52,48 @@ static cxa_btle_advField_t* findBeaconFieldInPacket(cxa_btle_advPacket_t* packet
 
 
 // ******** global function implementations ********
-void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_ioStream_t *const ios_remoteClientIn)
+void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_mqtt_rpc_node_t *const rpcNodeIn)
 {
 	cxa_assert(bmIn);
 	cxa_assert(btleClientIn);
 
 	// setup our internal state
-	bmIn->hasStarted = false;
+	cxa_timeDiff_init(&bmIn->td_scanningCheck);
 	bmIn->btleClient = btleClientIn;
-	bmIn->ios_remoteClient = ios_remoteClientIn;
 
 	// initialize our logger
 	cxa_logger_init(&bmIn->logger, "beaconManager");
 
 	cxa_array_initStd(&bmIn->knownBeacons, bmIn->knownBeacons_raw);
 	cxa_fixedFifo_initStd(&bmIn->rxUpdates, CXA_FF_ON_FULL_DROP, bmIn->rxUpdates_raw);
+	cxa_array_initStd(&bmIn->listeners, bmIn->listeners_raw);
+
+	// setup rpc if needed
+	if( rpcNodeIn != NULL ) ovr_beaconManager_rpcInterface_init(&bmIn->bmri, bmIn, rpcNodeIn);
 
 	// add ourselves to the runloop
 	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bmIn);
+}
+
+
+void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconFoundIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconUpdateIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconLostIn,
+		void* userVarIn)
+{
+	cxa_assert(bmIn);
+
+	// create our new listener
+	ovr_beaconManager_listenerEntry_t newEntry = {
+			.cb_onBeaconFound = cb_onBeaconFoundIn,
+			.cb_onBeaconUpdate = cb_onBeaconUpdateIn,
+			.cb_onBeaconLost = cb_onBeaconLostIn,
+			.userVar = userVarIn
+	};
+
+	// add it to our array of listeners
+	cxa_assert( cxa_array_append(&bmIn->listeners, &newEntry) );
 }
 
 
@@ -97,20 +126,36 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 				cxa_uuid128_string_t uuid_str;
 				cxa_uuid128_toShortString(ovr_beaconProxy_getUuid128(currProxy), &uuid_str);
 				cxa_logger_debug(&bmIn->logger, "updated proxy '%s'  rssi: %d  temp_f: %d  batt_pcnt: %d",
-						uuid_str.str, currUpdate->rssi_dBm, (int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0), currUpdate->batt_pcnt);
+						uuid_str.str, currUpdate->rssi_dBm, (int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0), currUpdate->batt_pcnt100);
+
+				// notify our listeners
+				notifyListeners_onUpdate(bmIn, currProxy);
+
 				break;
 			}
 		}
 		if( isKnownProxy ) continue;
 
-		// if we made it here, we have a new proxy
-		ovr_beaconProxy_t newProxy;
-		if( !ovr_beaconProxy_init(&newProxy, currUpdate) ) return;
-		cxa_array_append(&bmIn->knownBeacons, &newProxy);
+		// if we made it here, we have a new proxy...allocate directly in the array
+		// so we can maintain the pointer for the listener
+		ovr_beaconProxy_t* proxyInArray = (ovr_beaconProxy_t*)cxa_array_append_empty(&bmIn->knownBeacons);
+		if( proxyInArray == NULL )
+		{
+			cxa_logger_warn(&bmIn->logger, "too many beacons in range...dropping");
+			return;
+		}
+		if( !ovr_beaconProxy_init(proxyInArray, currUpdate) )
+		{
+			cxa_array_remove(&bmIn->knownBeacons, proxyInArray);
+			return;
+		}
 
 		cxa_uuid128_string_t uuid_str;
-		cxa_uuid128_toString(ovr_beaconProxy_getUuid128(&newProxy), &uuid_str);
+		cxa_uuid128_toString(ovr_beaconProxy_getUuid128(proxyInArray), &uuid_str);
 		cxa_logger_debug(&bmIn->logger, "new proxy '%s'", uuid_str.str);
+
+		// notify our listeners
+		notifyListeners_onFound(bmIn, proxyInArray);
 
 	}
 	cxa_fixedFifo_bulkDequeue(&bmIn->rxUpdates, numUpdates);
@@ -146,7 +191,56 @@ static void pruneLostProxies(ovr_beaconManager_t *const bmIn)
 	{
 		if( currProxyPtr == NULL ) continue;
 
+		// gotta notify before they're actually removed...otherwise
+		// the memory in the array will be freed
+		notifyListeners_onLost(bmIn, *currProxyPtr);
+
 		cxa_array_remove(&bmIn->knownBeacons, *currProxyPtr);
+	}
+}
+
+
+static void notifyListeners_onFound(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(bmIn);
+	cxa_assert(beaconProxyIn)
+
+	cxa_array_iterate(&bmIn->listeners, currListener, ovr_beaconManager_listenerEntry_t)
+	{
+		if( (currListener != NULL) && (currListener->cb_onBeaconFound != NULL) )
+		{
+			currListener->cb_onBeaconFound(beaconProxyIn, currListener->userVar);
+		}
+	}
+}
+
+
+static void notifyListeners_onUpdate(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(bmIn);
+	cxa_assert(beaconProxyIn)
+
+	cxa_array_iterate(&bmIn->listeners, currListener, ovr_beaconManager_listenerEntry_t)
+	{
+		if( (currListener != NULL) && (currListener->cb_onBeaconUpdate != NULL) )
+		{
+			currListener->cb_onBeaconUpdate(beaconProxyIn, currListener->userVar);
+		}
+	}
+}
+
+
+static void notifyListeners_onLost(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(bmIn);
+	cxa_assert(beaconProxyIn)
+
+	cxa_array_iterate(&bmIn->listeners, currListener, ovr_beaconManager_listenerEntry_t)
+	{
+		if( (currListener != NULL) && (currListener->cb_onBeaconLost != NULL) )
+		{
+			currListener->cb_onBeaconLost(beaconProxyIn, currListener->userVar);
+		}
 	}
 }
 
@@ -156,10 +250,13 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
 	cxa_assert(bmIn);
 
-	if( !bmIn->hasStarted )
+	if( cxa_timeDiff_isElapsed_recurring_ms(&bmIn->td_scanningCheck, SCAN_CHECK_PERIOD_MS) )
 	{
-		bmIn->hasStarted = true;
-		cxa_btle_client_startScan_passive(bmIn->btleClient, btleCb_onAdvertRx, NULL, (void*)bmIn);
+		if( !cxa_btle_client_isScanning(bmIn->btleClient) )
+		{
+			cxa_logger_info(&bmIn->logger, "scanning for beacons");
+			cxa_btle_client_startScan_passive(bmIn->btleClient, btleCb_onAdvertRx, NULL, (void*)bmIn);
+		}
 	}
 
 	// do the real business

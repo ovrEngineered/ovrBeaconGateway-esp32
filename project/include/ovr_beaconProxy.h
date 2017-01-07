@@ -41,12 +41,26 @@ typedef struct
 
 
 // ******** global function prototypes ********
+/**
+ * @protected
+ */
 bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpdate_t *const updateIn);
 
-cxa_uuid128_t* ovr_beaconProxy_getUuid128(ovr_beaconProxy_t *const beaconProxyIn);
 
+ovr_beaconProxy_devType_t ovr_beaconProxy_getDeviceType(ovr_beaconProxy_t *const beaconProxyIn);
+cxa_uuid128_t* ovr_beaconProxy_getUuid128(ovr_beaconProxy_t *const beaconProxyIn);
+ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaconProxyIn);
+
+
+/**
+ * @protected
+ */
 void ovr_beaconProxy_update(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpdate_t *const updateIn);
 
+
+/**
+ * @protected
+ */
 bool ovr_beaconProxy_hasTimedOut(ovr_beaconProxy_t *const beaconProxyIn);
 
 #endif

@@ -56,11 +56,27 @@ bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpda
 }
 
 
+ovr_beaconProxy_devType_t ovr_beaconProxy_getDeviceType(ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(beaconProxyIn);
+
+	return beaconProxyIn->lastUpdate.devType;
+}
+
+
 cxa_uuid128_t* ovr_beaconProxy_getUuid128(ovr_beaconProxy_t *const beaconProxyIn)
 {
 	cxa_assert(beaconProxyIn);
 
 	return &beaconProxyIn->lastUpdate.uuid;
+}
+
+
+ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(beaconProxyIn);
+
+	return &beaconProxyIn->lastUpdate;
 }
 
 

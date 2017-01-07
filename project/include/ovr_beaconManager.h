@@ -20,11 +20,14 @@
 
 // ******** includes ********
 #include <cxa_array.h>
+#include <cxa_config.h>
 #include <cxa_btle_client.h>
 #include <cxa_fixedFifo.h>
 #include <cxa_ioStream.h>
 #include <cxa_logger_header.h>
+#include <cxa_timeDiff.h>
 
+#include <ovr_beaconManager_rpcInterface.h>
 #include <ovr_beaconProxy.h>
 #include <ovr_beaconUpdate.h>
 
@@ -38,14 +41,46 @@
 	#define OVR_BEACONMANAGER_MAXSIZE_RX_FIFO		4
 #endif
 
+#ifndef OVR_BEACONMANAGER_MAXNUM_LISTENERS
+	#define OVR_BEACONMANAGER_MAXNUM_LISTENERS			4
+#endif
+
 
 // ******** global type definitions *********
+/**
+ * @public
+ */
+typedef struct ovr_beaconManager ovr_beaconManager_t;
+
+
+/**
+ * @public
+ */
+typedef void (*ovr_beaconManager_cb_beaconListener_t)(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn);
+
+
+/**
+ * @private
+ */
 typedef struct
 {
-	bool hasStarted;
+	ovr_beaconManager_cb_beaconListener_t cb_onBeaconFound;
+	ovr_beaconManager_cb_beaconListener_t cb_onBeaconUpdate;
+	ovr_beaconManager_cb_beaconListener_t cb_onBeaconLost;
+
+	void *userVar;
+}ovr_beaconManager_listenerEntry_t;
+
+
+/**
+ * @private
+ */
+struct ovr_beaconManager
+{
+	cxa_timeDiff_t td_scanningCheck;
 
 	cxa_btle_client_t* btleClient;
-	cxa_ioStream_t* ios_remoteClient;
+	ovr_beaconManager_rpcInterface_t bmri;
 
 	cxa_array_t knownBeacons;
 	ovr_beaconProxy_t knownBeacons_raw[OVR_BEACONMANAGER_MAXNUM_BEACONS];
@@ -53,11 +88,20 @@ typedef struct
 	cxa_fixedFifo_t rxUpdates;
 	ovr_beaconUpdate_t rxUpdates_raw[OVR_BEACONMANAGER_MAXSIZE_RX_FIFO];
 
+	cxa_array_t listeners;
+	ovr_beaconManager_listenerEntry_t listeners_raw[OVR_BEACONMANAGER_MAXNUM_LISTENERS];
+
 	cxa_logger_t logger;
-}ovr_beaconManager_t;
+};
 
 
 // ******** global function prototypes ********
-void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_ioStream_t *const ios_remoteClientIn);
+void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_mqtt_rpc_node_t *const rpcNodeIn);
+
+void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconFoundIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconUpdateIn,
+		ovr_beaconManager_cb_beaconListener_t cb_onBeaconLostIn,
+		void* userVarIn);
 
 #endif

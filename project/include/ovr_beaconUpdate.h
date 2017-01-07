@@ -51,7 +51,7 @@ typedef struct
 	uint8_t txPower_1m;
 
 	ovr_beaconProxy_status_t status;
-	uint8_t batt_pcnt;
+	uint8_t batt_pcnt100;
 	uint8_t currTemp_c;
 }ovr_beaconUpdate_t;
 
@@ -59,6 +59,9 @@ typedef struct
 // ******** global function prototypes ********
 bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn, cxa_fixedByteBuffer_t *const fbbIn);
 
+uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn);
+int8_t ovr_beaconUpdate_getRssi(ovr_beaconUpdate_t *const updateIn);
+uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn);
 cxa_uuid128_t* ovr_beaconUpdate_getUuid128(ovr_beaconUpdate_t *const updateIn);
 
 #endif
