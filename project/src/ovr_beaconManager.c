@@ -43,6 +43,10 @@ static void notifyListeners_onUpdate(ovr_beaconManager_t *const bmIn, ovr_beacon
 static void notifyListeners_onLost(ovr_beaconManager_t *const bmIn, ovr_beaconProxy_t *const beaconProxyIn);
 
 static void cb_onRunLoopUpdate(void* userVarIn);
+
+static void btleCb_onReady(cxa_btle_client_t *const btlecIn, void* userVarIn);
+static void btleCb_onFailedInit(cxa_btle_client_t *const btlecIn, bool willAutoRetryIn, void* userVarIn);
+static void btleCb_onScanStart(void* userVarIn, bool wasSuccessfulIn);
 static void btleCb_onAdvertRx(cxa_btle_advPacket_t* packetIn, void* userVarIn);
 
 static cxa_btle_advField_t* findBeaconFieldInPacket(cxa_btle_advPacket_t* packetIn);
@@ -59,7 +63,6 @@ void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *
 
 	// setup our internal state
 	cxa_timeDiff_init(&bmIn->td_scanningCheck);
-	bmIn->btleClient = btleClientIn;
 
 	// initialize our logger
 	cxa_logger_init(&bmIn->logger, "beaconManager");
@@ -67,6 +70,10 @@ void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *
 	cxa_array_initStd(&bmIn->knownBeacons, bmIn->knownBeacons_raw);
 	cxa_fixedFifo_initStd(&bmIn->rxUpdates, CXA_FF_ON_FULL_DROP, bmIn->rxUpdates_raw);
 	cxa_array_initStd(&bmIn->listeners, bmIn->listeners_raw);
+
+	// setup our BTLE
+	bmIn->btleClient = btleClientIn;
+	cxa_btle_client_addListener(bmIn->btleClient, btleCb_onReady, btleCb_onFailedInit, (void*)bmIn);
 
 	// setup rpc if needed
 	if( rpcNodeIn != NULL ) ovr_beaconManager_rpcInterface_init(&bmIn->bmri, bmIn, rpcNodeIn);
@@ -97,6 +104,14 @@ void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
 }
 
 
+cxa_array_t* ovr_beaconManager_getKownBeacons(ovr_beaconManager_t *const bmIn)
+{
+	cxa_assert(bmIn);
+
+	return &bmIn->knownBeacons;
+}
+
+
 // ******** local function implementations ********
 static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 {
@@ -114,19 +129,20 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 		{
 			if( currProxy == NULL ) continue;
 
-			cxa_uuid128_string_t uuid_str_proxy, uuid_str_update;
-			cxa_uuid128_toString(ovr_beaconProxy_getUuid128(currProxy), &uuid_str_proxy);
-			cxa_uuid128_toString(ovr_beaconUpdate_getUuid128(currUpdate), &uuid_str_update);
+			cxa_eui48_string_t uuid_str_proxy, uuid_str_update;
+			cxa_eui48_toString(ovr_beaconProxy_getEui48(currProxy), &uuid_str_proxy);
+			cxa_eui48_toString(ovr_beaconUpdate_getEui48(currUpdate), &uuid_str_update);
 
-			if( cxa_uuid128_isEqual(ovr_beaconProxy_getUuid128(currProxy), ovr_beaconUpdate_getUuid128(currUpdate)) )
+			if( cxa_eui48_isEqual(ovr_beaconProxy_getEui48(currProxy), ovr_beaconUpdate_getEui48(currUpdate)) )
 			{
 				isKnownProxy = true;
 				ovr_beaconProxy_update(currProxy, currUpdate);
 
-				cxa_uuid128_string_t uuid_str;
-				cxa_uuid128_toShortString(ovr_beaconProxy_getUuid128(currProxy), &uuid_str);
-				cxa_logger_debug(&bmIn->logger, "updated proxy '%s'  rssi: %d  temp_f: %d  batt_pcnt: %d",
-						uuid_str.str, currUpdate->rssi_dBm, (int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0), currUpdate->batt_pcnt100);
+				cxa_eui48_string_t uuid_str;
+				cxa_eui48_toShortString(ovr_beaconProxy_getEui48(currProxy), &uuid_str);
+				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  temp_f: %d  batt:%d%% (%.02fV)  light: %d",
+						uuid_str.str, currUpdate->rssi_dBm, (int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0),
+						currUpdate->batt_pcnt100, (float)currUpdate->batt_mv/1000.0, currUpdate->light_255);
 
 				// notify our listeners
 				notifyListeners_onUpdate(bmIn, currProxy);
@@ -150,13 +166,12 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 			return;
 		}
 
-		cxa_uuid128_string_t uuid_str;
-		cxa_uuid128_toString(ovr_beaconProxy_getUuid128(proxyInArray), &uuid_str);
+		cxa_eui48_string_t uuid_str;
+		cxa_eui48_toString(ovr_beaconProxy_getEui48(proxyInArray), &uuid_str);
 		cxa_logger_debug(&bmIn->logger, "new proxy '%s'", uuid_str.str);
 
 		// notify our listeners
 		notifyListeners_onFound(bmIn, proxyInArray);
-
 	}
 	cxa_fixedFifo_bulkDequeue(&bmIn->rxUpdates, numUpdates);
 }
@@ -178,8 +193,8 @@ static void pruneLostProxies(ovr_beaconManager_t *const bmIn)
 
 		if( ovr_beaconProxy_hasTimedOut(currProxy) )
 		{
-			cxa_uuid128_string_t uuid_str;
-			cxa_uuid128_toString(ovr_beaconProxy_getUuid128(currProxy), &uuid_str);
+			cxa_eui48_string_t uuid_str;
+			cxa_eui48_toString(ovr_beaconProxy_getEui48(currProxy), &uuid_str);
 			cxa_logger_debug(&bmIn->logger, "lost proxy '%s'", uuid_str.str);
 
 			cxa_array_append(&timedOutProxies, &currProxy);
@@ -250,18 +265,46 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
 	cxa_assert(bmIn);
 
-	if( cxa_timeDiff_isElapsed_recurring_ms(&bmIn->td_scanningCheck, SCAN_CHECK_PERIOD_MS) )
+	if( cxa_btle_client_isReady(bmIn->btleClient) &&
+		cxa_timeDiff_isElapsed_recurring_ms(&bmIn->td_scanningCheck, SCAN_CHECK_PERIOD_MS) &&
+		!cxa_btle_client_isScanning(bmIn->btleClient) )
+
 	{
-		if( !cxa_btle_client_isScanning(bmIn->btleClient) )
-		{
-			cxa_logger_info(&bmIn->logger, "scanning for beacons");
-			cxa_btle_client_startScan_passive(bmIn->btleClient, btleCb_onAdvertRx, NULL, (void*)bmIn);
-		}
+		cxa_logger_info(&bmIn->logger, "restarting beacon scan");
+		cxa_btle_client_startScan_passive(bmIn->btleClient, btleCb_onScanStart, btleCb_onAdvertRx, (void*)bmIn);
 	}
 
 	// do the real business
 	processRxUpdateFifo(bmIn);
 	pruneLostProxies(bmIn);
+}
+
+
+static void btleCb_onReady(cxa_btle_client_t *const btlecIn, void* userVarIn)
+{
+	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
+	cxa_assert(bmIn);
+
+	cxa_timeDiff_setStartTime_now(&bmIn->td_scanningCheck);
+	cxa_btle_client_startScan_passive(bmIn->btleClient, btleCb_onScanStart, btleCb_onAdvertRx, (void*)bmIn);
+}
+
+
+static void btleCb_onFailedInit(cxa_btle_client_t *const btlecIn, bool willAutoRetryIn, void* userVarIn)
+{
+	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
+	cxa_assert(bmIn);
+
+	cxa_logger_warn(&bmIn->logger, "BTLE radio failed to boot");
+}
+
+
+static void btleCb_onScanStart(void* userVarIn, bool wasSuccessfulIn)
+{
+	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
+	cxa_assert(bmIn);
+
+	if( !wasSuccessfulIn ) cxa_logger_warn(&bmIn->logger, "failed to start scan");
 }
 
 
@@ -274,9 +317,9 @@ static void btleCb_onAdvertRx(cxa_btle_advPacket_t* packetIn, void* userVarIn)
 	cxa_btle_advField_t* beaconField = findBeaconFieldInPacket(packetIn);
 	if( beaconField == NULL ) return;
 
-//	cxa_logger_stepDebug_memDump("data: ",
-//								 cxa_fixedByteBuffer_get_pointerToIndex(&beaconField->asManufacturerData.manBytes, 0),
-//								 cxa_fixedByteBuffer_getSize_bytes(&beaconField->asManufacturerData.manBytes));
+	cxa_logger_stepDebug_memDump("data: ",
+								 cxa_fixedByteBuffer_get_pointerToIndex(&beaconField->asManufacturerData.manBytes, 0),
+								 cxa_fixedByteBuffer_getSize_bytes(&beaconField->asManufacturerData.manBytes));
 
 	// parse our information from the packet
 	ovr_beaconUpdate_t parsedUpdate;

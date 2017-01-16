@@ -64,7 +64,7 @@ ovr_beaconProxy_devType_t ovr_beaconProxy_getDeviceType(ovr_beaconProxy_t *const
 }
 
 
-cxa_uuid128_t* ovr_beaconProxy_getUuid128(ovr_beaconProxy_t *const beaconProxyIn)
+cxa_eui48_t* ovr_beaconProxy_getEui48(ovr_beaconProxy_t *const beaconProxyIn)
 {
 	cxa_assert(beaconProxyIn);
 

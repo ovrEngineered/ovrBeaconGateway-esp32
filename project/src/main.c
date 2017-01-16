@@ -87,7 +87,7 @@ void app_main(void)
 static void sysInit()
 {
 	// setup our debug serial console
-	cxa_esp32_usart_init_noHH(&usart_debug, UART_NUM_0, 115200);
+	cxa_esp32_usart_init(&usart_debug, UART_NUM_0, 115200, false);
 	cxa_assert_setIoStream(cxa_usart_getIoStream(&usart_debug.super));
 
 	// setup our timebase
@@ -108,9 +108,10 @@ static void sysInit()
 
 	// setup our application-specific peripherals
 	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_4, CXA_GPIO_POLARITY_INVERTED, 1);
-	cxa_esp32_usart_init_noHH(&usart_btle, UART_NUM_1, 57600);
+	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, false);
 	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super), &gpio_btleReset.super);
 	ovr_beaconManager_init(&beaconManager, &btleClient.super, &rpcNode_root.super);
+//	ovr_beaconManager_init(&beaconManager, &btleClient.super, NULL);
 
 	cxa_console_addCommand("noti", "notify", NULL, 0, consoleCb_noti, NULL);
 

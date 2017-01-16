@@ -18,7 +18,9 @@
 
 // ******** includes ********
 #include <cxa_assert.h>
+#include <cxa_runLoop.h>
 #include <cxa_stringUtils.h>
+#include <cxa_uuid128.h>
 
 #include <ovr_beaconManager.h>
 #include <ovr_beaconProxy.h>
@@ -31,12 +33,14 @@
 
 // ******** local macro definitions ********
 #define UPDATE_MAX_PAYLOAD_BYTES				256
+#define UPDATE_PERIOD_MS						60000
 
 
 // ******** local type definitions ********
 
 
 // ******** local function prototypes ********
+static void cb_onRunLoopUpdate(void* userVarIn);
 static void beaconCb_onBeaconUpdated(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn);
 
 
@@ -54,55 +58,87 @@ void ovr_beaconManager_rpcInterface_init(ovr_beaconManager_rpcInterface_t *const
 	bmriIn->bm = bmIn;
 	bmriIn->rpcNode = rpcNodeIn;
 
+	cxa_timeDiff_init(&bmriIn->td_sendUpdate);
+
 	// register for beacon events
 	ovr_beaconManager_addListener(bmriIn->bm, NULL, beaconCb_onBeaconUpdated, NULL, (void*)bmriIn);
+
+	// register for runloop updates
+	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bmriIn);
 }
 
 
 // ******** local function implementations ********
-static void beaconCb_onBeaconUpdated(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn)
+static void cb_onRunLoopUpdate(void* userVarIn)
 {
 	ovr_beaconManager_rpcInterface_t* bmriIn = (ovr_beaconManager_rpcInterface_t*)userVarIn;
 	cxa_assert(bmriIn);
 
-	// send an update notification...unfortunately it needs to be JSON for AWS IoT :'(
-	ovr_beaconUpdate_t* lastUpdate = ovr_beaconProxy_getLastUpdate(beaconProxyIn);
-	if( lastUpdate == NULL ) return;
+	if( cxa_timeDiff_isElapsed_recurring_ms(&bmriIn->td_sendUpdate, UPDATE_PERIOD_MS) )
+	{
+		// iterate over our beacons and send last-known values
+		cxa_array_iterate(ovr_beaconManager_getKownBeacons(bmriIn->bm), currBeacon, ovr_beaconProxy_t)
+		{
+			if( currBeacon == NULL ) continue;
 
-	// get our individual strings together
-	cxa_uuid128_t updateUuid;
-	cxa_uuid128_string_t updateUuid_str;
-	cxa_uuid128_initRandom(&updateUuid);
-	cxa_uuid128_toString(&updateUuid, &updateUuid_str);
+			ovr_beaconUpdate_t* lastUpdate = ovr_beaconProxy_getLastUpdate(currBeacon);
+			if( lastUpdate == NULL ) continue;
 
-	cxa_uuid128_string_t uuid_str;
-	cxa_uuid128_toString(ovr_beaconProxy_getUuid128(beaconProxyIn), &uuid_str);
+			// get our individual strings together
+			cxa_uuid128_t updateUuid;
+			cxa_uuid128_string_t updateUuid_str;
+			cxa_uuid128_initRandom(&updateUuid);
+			cxa_uuid128_toString(&updateUuid, &updateUuid_str);
 
-	char temp_str[4];
-	snprintf(temp_str, sizeof(temp_str), "%d", ovr_beaconUpdate_getTemp_c(lastUpdate));
-	temp_str[sizeof(temp_str)-1] = 0;
+			cxa_eui48_string_t uuid_str;
+			cxa_eui48_toString(ovr_beaconProxy_getEui48(currBeacon), &uuid_str);
 
-	char rssi_str[5];
-	snprintf(rssi_str, sizeof(rssi_str), "%d", ovr_beaconUpdate_getRssi(lastUpdate));
-	rssi_str[sizeof(rssi_str)-1] = 0;
+			char rssi_str[5];
+			snprintf(rssi_str, sizeof(rssi_str), "%d", ovr_beaconUpdate_getRssi(lastUpdate));
+			rssi_str[sizeof(rssi_str)-1] = 0;
 
-	char batt_str[4];
-	snprintf(batt_str, sizeof(batt_str), "%d", ovr_beaconUpdate_getBattery_pcnt100(lastUpdate));
-	batt_str[sizeof(batt_str)-1] = 0;
+			char temp_str[4];
+			snprintf(temp_str, sizeof(temp_str), "%d", ovr_beaconUpdate_getTemp_c(lastUpdate));
+			temp_str[sizeof(temp_str)-1] = 0;
 
-	// combine into one payload string
-	char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
-	if( !cxa_stringUtils_concat(notiPayload, "{\"updateUuid\":\"", sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, updateUuid_str.str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, "\",\"beaconUuid\":\"", sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, uuid_str.str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, "\",\"temp_c\":", sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, temp_str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, ",\"rssi\":", sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, rssi_str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, ",\"batt_pcnt\":", sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, batt_str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
+			char light_str[4];
+			snprintf(light_str, sizeof(light_str), "%d", ovr_beaconUpdate_getLight_255(lastUpdate));
+			light_str[sizeof(light_str)-1] = 0;
 
-	cxa_mqtt_rpc_node_publishNotification(bmriIn->rpcNode, "onBeaconUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
+			char battPcnt_str[4];
+			snprintf(battPcnt_str, sizeof(battPcnt_str), "%d", ovr_beaconUpdate_getBattery_pcnt100(lastUpdate));
+			battPcnt_str[sizeof(battPcnt_str)-1] = 0;
+
+			char battMv_str[5];
+			snprintf(battMv_str, sizeof(battMv_str), "%0.2f", (float)ovr_beaconUpdate_getBattery_mv(lastUpdate)/1000.0);
+			battMv_str[sizeof(battMv_str)-1] = 0;
+
+			// combine into one payload string
+			char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
+			if( !cxa_stringUtils_concat(notiPayload, "{\"updateUuid\":\"", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, updateUuid_str.str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "\",\"beaconUuid\":\"", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, uuid_str.str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "\",\"rssi\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, rssi_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"temp_c\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, temp_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"light_255\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, light_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"batt_pcnt\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, battPcnt_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"batt_mv\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, battMv_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
+
+			cxa_mqtt_rpc_node_publishNotification(bmriIn->rpcNode, "onBeaconUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
+		}
+	}
+}
+
+
+static void beaconCb_onBeaconUpdated(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn)
+{
+	ovr_beaconManager_rpcInterface_t* bmriIn = (ovr_beaconManager_rpcInterface_t*)userVarIn;
+	cxa_assert(bmriIn);
 }

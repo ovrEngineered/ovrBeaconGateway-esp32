@@ -23,7 +23,7 @@
 
 #include <cxa_fixedByteBuffer.h>
 #include <cxa_timeDiff.h>
-#include <cxa_uuid128.h>
+#include <cxa_eui48.h>
 
 #include <ovr_beaconUpdate.h>
 
@@ -48,7 +48,7 @@ bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpda
 
 
 ovr_beaconProxy_devType_t ovr_beaconProxy_getDeviceType(ovr_beaconProxy_t *const beaconProxyIn);
-cxa_uuid128_t* ovr_beaconProxy_getUuid128(ovr_beaconProxy_t *const beaconProxyIn);
+cxa_eui48_t* ovr_beaconProxy_getEui48(ovr_beaconProxy_t *const beaconProxyIn);
 ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaconProxyIn);
 
 

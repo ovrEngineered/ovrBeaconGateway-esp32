@@ -20,6 +20,7 @@
 
 // ******** includes ********
 #include <cxa_mqtt_rpc_node.h>
+#include <cxa_timeDiff.h>
 
 
 // ******** global macro definitions ********
@@ -43,6 +44,8 @@ struct ovr_beaconManager_rpcInterface
 {
 	ovr_beaconManager_t* bm;
 	cxa_mqtt_rpc_node_t* rpcNode;
+
+	cxa_timeDiff_t td_sendUpdate;
 };
 
 

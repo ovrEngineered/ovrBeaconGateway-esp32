@@ -20,7 +20,7 @@
 
 // ******** includes ********
 #include <stdint.h>
-#include <cxa_uuid128.h>
+#include <cxa_eui48.h>
 
 
 // ******** global macro definitions ********
@@ -46,13 +46,14 @@ typedef struct
 	int8_t rssi_dBm;
 
 	ovr_beaconProxy_devType_t devType;
-	cxa_uuid128_t uuid;
-
-	uint8_t txPower_1m;
+	cxa_eui48_t uuid;
 
 	ovr_beaconProxy_status_t status;
 	uint8_t batt_pcnt100;
 	uint8_t currTemp_c;
+	uint8_t light_255;
+	uint16_t batt_mv;
+
 }ovr_beaconUpdate_t;
 
 
@@ -60,8 +61,10 @@ typedef struct
 bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn, cxa_fixedByteBuffer_t *const fbbIn);
 
 uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn);
+uint16_t ovr_beaconUpdate_getBattery_mv(ovr_beaconUpdate_t *const updateIn);
 int8_t ovr_beaconUpdate_getRssi(ovr_beaconUpdate_t *const updateIn);
 uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn);
-cxa_uuid128_t* ovr_beaconUpdate_getUuid128(ovr_beaconUpdate_t *const updateIn);
+uint8_t ovr_beaconUpdate_getLight_255(ovr_beaconUpdate_t *const updateIn);
+cxa_eui48_t* ovr_beaconUpdate_getEui48(ovr_beaconUpdate_t *const updateIn);
 
 #endif

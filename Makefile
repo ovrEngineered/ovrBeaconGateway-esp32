@@ -3,6 +3,6 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := ovrBeaconGateway
+PROJECT_NAME := ovrBeaconGateway-esp32
 
 include $(IDF_PATH)/make/project.mk

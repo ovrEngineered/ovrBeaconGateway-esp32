@@ -44,17 +44,17 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 0, devType_raw) ) return false;
 	updateIn->devType = devType_raw;
 
-	if( !cxa_uuid128_initFromBuffer(&updateIn->uuid, fbbIn, 1) ) return false;
-
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 17, updateIn->txPower_1m) ) return false;
+	if( !cxa_eui48_initFromBuffer(&updateIn->uuid, fbbIn, 1) ) return false;
 
 	uint8_t status_raw;
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 18, status_raw) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 7, status_raw) ) return false;
 	updateIn->status.isEnumerating = status_raw & (1 << 7);
 	updateIn->status.needsPoll = status_raw & (1 << 6);
 
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 19, updateIn->batt_pcnt100) ) return false;
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 20, updateIn->currTemp_c) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 8, updateIn->batt_pcnt100) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 9, updateIn->currTemp_c) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 10, updateIn->light_255) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint16LE(fbbIn, 11, updateIn->batt_mv) ) return false;
 
 	return true;
 }
@@ -65,6 +65,14 @@ uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn)
 	cxa_assert(updateIn);
 
 	return updateIn->batt_pcnt100;
+}
+
+
+uint16_t ovr_beaconUpdate_getBattery_mv(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->batt_mv;
 }
 
 
@@ -84,7 +92,15 @@ uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn)
 }
 
 
-cxa_uuid128_t* ovr_beaconUpdate_getUuid128(ovr_beaconUpdate_t *const updateIn)
+uint8_t ovr_beaconUpdate_getLight_255(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->light_255;
+}
+
+
+cxa_eui48_t* ovr_beaconUpdate_getEui48(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 

@@ -53,12 +53,12 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="ovrBeaconGateway.null.759470168" name="ovrBeaconGateway"/>
+		<project id="ovrBeaconGateway-esp32.null.759470168" name="ovrBeaconGateway-esp32"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Default">
-			<resource resourceType="PROJECT" workspacePath="/ovrBeaconGateway"/>
+			<resource resourceType="PROJECT" workspacePath="/ovrBeaconGateway-esp32"/>
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
