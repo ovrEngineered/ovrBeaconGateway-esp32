@@ -317,9 +317,9 @@ static void btleCb_onAdvertRx(cxa_btle_advPacket_t* packetIn, void* userVarIn)
 	cxa_btle_advField_t* beaconField = findBeaconFieldInPacket(packetIn);
 	if( beaconField == NULL ) return;
 
-	cxa_logger_stepDebug_memDump("data: ",
-								 cxa_fixedByteBuffer_get_pointerToIndex(&beaconField->asManufacturerData.manBytes, 0),
-								 cxa_fixedByteBuffer_getSize_bytes(&beaconField->asManufacturerData.manBytes));
+//	cxa_logger_stepDebug_memDump("data: ",
+//								 cxa_fixedByteBuffer_get_pointerToIndex(&beaconField->asManufacturerData.manBytes, 0),
+//								 cxa_fixedByteBuffer_getSize_bytes(&beaconField->asManufacturerData.manBytes));
 
 	// parse our information from the packet
 	ovr_beaconUpdate_t parsedUpdate;
