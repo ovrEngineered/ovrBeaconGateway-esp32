@@ -104,7 +104,7 @@ void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
 }
 
 
-cxa_array_t* ovr_beaconManager_getKownBeacons(ovr_beaconManager_t *const bmIn)
+cxa_array_t* ovr_beaconManager_getKnownBeacons(ovr_beaconManager_t *const bmIn)
 {
 	cxa_assert(bmIn);
 

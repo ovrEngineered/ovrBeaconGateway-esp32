@@ -19,7 +19,9 @@
 // ******** includes ********
 #include <cxa_assert.h>
 #include <cxa_runLoop.h>
+#include <cxa_sntpClient.h>
 #include <cxa_stringUtils.h>
+#include <cxa_uniqueId.h>
 #include <cxa_uuid128.h>
 
 #include <ovr_beaconManager.h>
@@ -74,10 +76,10 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 	ovr_beaconManager_rpcInterface_t* bmriIn = (ovr_beaconManager_rpcInterface_t*)userVarIn;
 	cxa_assert(bmriIn);
 
-	if( cxa_timeDiff_isElapsed_recurring_ms(&bmriIn->td_sendUpdate, UPDATE_PERIOD_MS) )
+	if( cxa_sntpClient_isClockSet() && cxa_timeDiff_isElapsed_recurring_ms(&bmriIn->td_sendUpdate, UPDATE_PERIOD_MS) )
 	{
 		// iterate over our beacons and send last-known values
-		cxa_array_iterate(ovr_beaconManager_getKownBeacons(bmriIn->bm), currBeacon, ovr_beaconProxy_t)
+		cxa_array_iterate(ovr_beaconManager_getKnownBeacons(bmriIn->bm), currBeacon, ovr_beaconProxy_t)
 		{
 			if( currBeacon == NULL ) continue;
 
@@ -89,6 +91,12 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 			cxa_uuid128_string_t updateUuid_str;
 			cxa_uuid128_initRandom(&updateUuid);
 			cxa_uuid128_toString(&updateUuid, &updateUuid_str);
+
+			char* gatewayUniqueId = cxa_uniqueId_getHexString();
+
+			char timestamp_str[11];
+			snprintf(timestamp_str, sizeof(timestamp_str), "%d", cxa_sntpClient_getUnixTimeStamp());
+			timestamp_str[sizeof(timestamp_str)-1] = 0;
 
 			cxa_eui48_string_t uuid_str;
 			cxa_eui48_toString(ovr_beaconProxy_getEui48(currBeacon), &uuid_str);
@@ -117,7 +125,11 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 			char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
 			if( !cxa_stringUtils_concat(notiPayload, "{\"updateUuid\":\"", sizeof(notiPayload)) ) return;
 			if( !cxa_stringUtils_concat(notiPayload, updateUuid_str.str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, "\",\"beaconUuid\":\"", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "\",\"gatewayId\":\"", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, gatewayUniqueId, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "\",\"timestamp\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"beaconUuid\":\"", sizeof(notiPayload)) ) return;
 			if( !cxa_stringUtils_concat(notiPayload, uuid_str.str, sizeof(notiPayload)) ) return;
 			if( !cxa_stringUtils_concat(notiPayload, "\",\"rssi\":", sizeof(notiPayload)) ) return;
 			if( !cxa_stringUtils_concat(notiPayload, rssi_str, sizeof(notiPayload)) ) return;

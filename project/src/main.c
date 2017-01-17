@@ -33,11 +33,12 @@
 #include <cxa_esp32_gpio.h>
 #include <cxa_esp32_timeBase.h>
 #include <cxa_esp32_usart.h>
+#include <cxa_ioStream_bridge.h>
 #include <cxa_mqtt_connectionManager.h>
 #include <cxa_mqtt_rpc_node_root.h>
 #include <cxa_network_wifiManager.h>
-#include <cxa_ioStream_bridge.h>
 #include <cxa_runLoop.h>
+#include <cxa_sntpClient.h>
 #include <cxa_uniqueId.h>
 
 #include <ovr_beaconManager.h>
@@ -99,6 +100,7 @@ static void sysInit()
 
 	// setup our networking
 	cxa_network_wifiManager_init();
+	cxa_sntpClient_init();
 	cxa_mqtt_connManager_init_clientCert(NULL,
 										 MQTT_SERVER, MQTT_PORT,
 										 tls_server_root_cert, sizeof(tls_server_root_cert),

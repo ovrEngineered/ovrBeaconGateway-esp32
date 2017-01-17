@@ -104,6 +104,6 @@ void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
 		ovr_beaconManager_cb_beaconListener_t cb_onBeaconLostIn,
 		void* userVarIn);
 
-cxa_array_t* ovr_beaconManager_getKownBeacons(ovr_beaconManager_t *const bmIn);
+cxa_array_t* ovr_beaconManager_getKnownBeacons(ovr_beaconManager_t *const bmIn);
 
 #endif
