@@ -32,12 +32,24 @@
 
 
 // ******** global type definitions *********
-typedef struct
+/**
+ * @public
+ * @brief "Forward" declaration of the ovr_beaconProxy_t object
+ */
+typedef struct ovr_beaconProxy ovr_beaconProxy_t;
+
+
+/**
+ * @private
+ */
+struct ovr_beaconProxy
 {
 	cxa_timeDiff_t td_lastUpdate;
 
 	ovr_beaconUpdate_t lastUpdate;
-}ovr_beaconProxy_t;
+
+	bool hasActivityPending;
+};
 
 
 // ******** global function prototypes ********
@@ -50,6 +62,18 @@ bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpda
 ovr_beaconProxy_devType_t ovr_beaconProxy_getDeviceType(ovr_beaconProxy_t *const beaconProxyIn);
 cxa_eui48_t* ovr_beaconProxy_getEui48(ovr_beaconProxy_t *const beaconProxyIn);
 ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaconProxyIn);
+
+/**
+ * Returns whether the beacon has pending activity. If there is pending activity
+ * AND the last update indicated activity, pending activity remains true. If there
+ * is pending activity AND the last update indicates no activity, pending activity
+ * becomes false.
+ *
+ * @parameter beaconProxyIn pre-initialize beaconProxy
+ *
+ * @return whether the beacon has pending activity
+ */
+bool ovr_beaconProxy_checkAndResetPendingActivity(ovr_beaconProxy_t *const beaconProxyIn);
 
 
 /**

@@ -36,8 +36,9 @@ typedef enum
 
 typedef struct
 {
-	uint8_t isEnumerating;
-	uint8_t needsPoll;
+	bool isCharging;
+	bool isEnumerating;
+	bool isActive;
 }ovr_beaconProxy_status_t;
 
 
@@ -59,6 +60,10 @@ typedef struct
 
 // ******** global function prototypes ********
 bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn, cxa_fixedByteBuffer_t *const fbbIn);
+
+bool ovr_beaconUpdate_getIsCharging(ovr_beaconUpdate_t *const updateIn);
+bool ovr_beaconUpdate_getIsEnumerating(ovr_beaconUpdate_t *const updateIn);
+bool ovr_beaconUpdate_getIsActive(ovr_beaconUpdate_t *const updateIn);
 
 uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn);
 uint16_t ovr_beaconUpdate_getBattery_mv(ovr_beaconUpdate_t *const updateIn);

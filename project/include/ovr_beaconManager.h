@@ -80,7 +80,6 @@ struct ovr_beaconManager
 	cxa_timeDiff_t td_scanningCheck;
 
 	cxa_btle_client_t* btleClient;
-	ovr_beaconManager_rpcInterface_t bmri;
 
 	cxa_array_t knownBeacons;
 	ovr_beaconProxy_t knownBeacons_raw[OVR_BEACONMANAGER_MAXNUM_BEACONS];
@@ -91,19 +90,32 @@ struct ovr_beaconManager
 	cxa_array_t listeners;
 	ovr_beaconManager_listenerEntry_t listeners_raw[OVR_BEACONMANAGER_MAXNUM_LISTENERS];
 
+	ovr_beaconManager_rpcInterface_t bmri;
+
 	cxa_logger_t logger;
 };
 
 
 // ******** global function prototypes ********
-void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_mqtt_rpc_node_t *const rpcNodeIn);
+/**
+ * @public
+ */
+void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn,
+							cxa_btle_client_t *const btleClientIn,
+							cxa_mqtt_rpc_node_t *const rpcNodeIn);
 
+/**
+ * @public
+ */
 void ovr_beaconManager_addListener(ovr_beaconManager_t *const bmIn,
 		ovr_beaconManager_cb_beaconListener_t cb_onBeaconFoundIn,
 		ovr_beaconManager_cb_beaconListener_t cb_onBeaconUpdateIn,
 		ovr_beaconManager_cb_beaconListener_t cb_onBeaconLostIn,
 		void* userVarIn);
 
+/**
+ * @public
+ */
 cxa_array_t* ovr_beaconManager_getKnownBeacons(ovr_beaconManager_t *const bmIn);
 
 #endif

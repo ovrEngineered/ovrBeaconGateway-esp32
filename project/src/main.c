@@ -34,14 +34,16 @@
 #include <cxa_esp32_timeBase.h>
 #include <cxa_esp32_usart.h>
 #include <cxa_ioStream_bridge.h>
+#include <cxa_lightSensor_ltr329.h>
 #include <cxa_mqtt_connectionManager.h>
 #include <cxa_mqtt_rpc_node_root.h>
 #include <cxa_network_wifiManager.h>
 #include <cxa_runLoop.h>
 #include <cxa_sntpClient.h>
+#include <cxa_tempSensor_si7050.h>
 #include <cxa_uniqueId.h>
 
-#include <ovr_beaconManager.h>
+#include <ovr_beaconGateway.h>
 
 #define CXA_LOG_LEVEL			CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
@@ -59,18 +61,28 @@
 static void sysInit();
 static void userTask(void *pvParameters);
 
-static void consoleCb_noti(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn);
-
 
 // ******** local variable declarations ********
-static cxa_esp32_gpio_t gpio_led;
-static cxa_esp32_usart_t usart_debug;
+static cxa_esp32_gpio_t gpio_led_error;
+static cxa_esp32_gpio_t gpio_led_btleAct;
+
+static cxa_esp32_gpio_t gpio_led_wifiAct_r;
+static cxa_esp32_gpio_t gpio_led_wifiAct_g;
+static cxa_esp32_gpio_t gpio_led_wifiAct_b;
 
 static cxa_esp32_gpio_t gpio_btleReset;
+static cxa_esp32_gpio_t gpio_btleRxEnable;
+static cxa_esp32_gpio_t gpio_btleTxEnable;
+
+static cxa_esp32_usart_t usart_debug;
+
 static cxa_esp32_usart_t usart_btle;
 static cxa_blueGiga_btle_client_t btleClient;
 
-static ovr_beaconManager_t beaconManager;
+static cxa_lightSensor_ltr329_t lightSensor;
+static cxa_tempSensor_si7050_t tempSensor;
+
+static ovr_beaconGateway_t beaconGateway;
 
 static cxa_mqtt_rpc_node_root_t rpcNode_root;
 
@@ -87,8 +99,11 @@ void app_main(void)
 // ******** local function implementations ********
 static void sysInit()
 {
+	cxa_esp32_gpio_init_output(&gpio_led_error, GPIO_NUM_14, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_assert_setAssertGpio(&gpio_led_error.super);
+
 	// setup our debug serial console
-	cxa_esp32_usart_init(&usart_debug, UART_NUM_0, 115200, false);
+	cxa_esp32_usart_init(&usart_debug, UART_NUM_0, 115200, GPIO_NUM_1, GPIO_NUM_3, false);
 	cxa_assert_setIoStream(cxa_usart_getIoStream(&usart_debug.super));
 
 	// setup our timebase
@@ -109,13 +124,23 @@ static void sysInit()
 	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_mqtt_connManager_getMqttClient(), true, cxa_uniqueId_getHexString());
 
 	// setup our application-specific peripherals
-	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_4, CXA_GPIO_POLARITY_INVERTED, 1);
-	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, false);
-	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super), &gpio_btleReset.super);
-	ovr_beaconManager_init(&beaconManager, &btleClient.super, &rpcNode_root.super);
-//	ovr_beaconManager_init(&beaconManager, &btleClient.super, NULL);
+	cxa_esp32_gpio_init_output(&gpio_led_btleAct, GPIO_NUM_27, CXA_GPIO_POLARITY_INVERTED, 0);
 
-	cxa_console_addCommand("noti", "notify", NULL, 0, consoleCb_noti, NULL);
+	cxa_esp32_gpio_init_output(&gpio_led_wifiAct_r, GPIO_NUM_32, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_wifiAct_g, GPIO_NUM_33, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_wifiAct_b, GPIO_NUM_25, CXA_GPIO_POLARITY_INVERTED, 0);
+
+	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_2, CXA_GPIO_POLARITY_INVERTED, 1);
+	cxa_esp32_gpio_init_output(&gpio_btleRxEnable, GPIO_NUM_12, CXA_GPIO_POLARITY_INVERTED, 1);
+	cxa_esp32_gpio_init_output(&gpio_btleTxEnable, GPIO_NUM_13, CXA_GPIO_POLARITY_NONINVERTED, 1);
+
+	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, GPIO_NUM_17, GPIO_NUM_16, false);
+	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super), &gpio_btleReset.super);
+
+	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
+	cxa_tempSensor_si7050_init(&tempSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
+
+	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
 
 	// schedule our user task for execution
 	xTaskCreate(userTask, (const char * const)"usrTask", 4096, NULL, tskIDLE_PRIORITY, NULL);
@@ -128,12 +153,4 @@ static void userTask(void *pvParameters)
 
 	// does not return
 	cxa_runLoop_execute();
-}
-
-
-static void consoleCb_noti(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn)
-{
-	char notiPayload[] = "{ \"beaconUuid\":\"acfc6376-c217-4a67-ada1-5a674473b291\", \"temp_c\":20, \"rssi\":-60, \"batt_pcnt\":80 }";
-
-	cxa_mqtt_rpc_node_publishNotification(&rpcNode_root.super, "ovrBeaconUpdate", CXA_MQTT_QOS_ATMOST_ONCE, (void*)notiPayload, strlen(notiPayload));
 }

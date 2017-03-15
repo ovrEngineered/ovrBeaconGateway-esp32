@@ -14,8 +14,8 @@
  *
  * @author Christopher Armenio
  */
-#ifndef OVR_BEACONMANAGER_RPCINTERFACE_H_
-#define OVR_BEACONMANAGER_RPCINTERFACE_H_
+#ifndef OVR_BEACONGATEWAY_RPCINTERFACE_H_
+#define OVR_BEACONGATEWAY_RPCINTERFACE_H_
 
 
 // ******** includes ********
@@ -30,20 +30,19 @@
 /**
  * @public
  */
-typedef struct ovr_beaconManager_rpcInterface ovr_beaconManager_rpcInterface_t;
+typedef struct ovr_beaconGateway_rpcInterface ovr_beaconGateway_rpcInterface_t;
 
 
 // forward declaration to avoid include cycle
-typedef struct ovr_beaconManager ovr_beaconManager_t;
-typedef struct ovr_beaconProxy ovr_beaconProxy_t;
+typedef struct ovr_beaconGateway ovr_beaconGateway_t;
 
 
 /**
  * @private
  */
-struct ovr_beaconManager_rpcInterface
+struct ovr_beaconGateway_rpcInterface
 {
-	ovr_beaconManager_t* bm;
+	ovr_beaconGateway_t* bg;
 	cxa_mqtt_rpc_node_t* rpcNode;
 
 	cxa_timeDiff_t td_sendUpdate;
@@ -51,6 +50,6 @@ struct ovr_beaconManager_rpcInterface
 
 
 // ******** global function prototypes ********
-void ovr_beaconManager_rpcInterface_init(ovr_beaconManager_rpcInterface_t *const bmriIn, ovr_beaconManager_t *const bmIn, cxa_mqtt_rpc_node_t *const rpcNodeIn);
+void ovr_beaconGateway_rpcInterface_init(ovr_beaconGateway_rpcInterface_t *const bgriIn, ovr_beaconGateway_t *const bgIn, cxa_mqtt_rpc_node_t *const rpcNodeIn);
 
 #endif

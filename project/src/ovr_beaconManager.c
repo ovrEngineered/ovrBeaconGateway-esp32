@@ -27,8 +27,8 @@
 
 
 // ******** local macro definitions ********
-#define COMPANY_ID				0xFFFF
-#define SCAN_CHECK_PERIOD_MS	10000
+#define COMPANY_ID						0xFFFF
+#define SCAN_CHECK_PERIOD_MS			10000
 
 
 // ******** local type definitions ********
@@ -46,7 +46,7 @@ static void cb_onRunLoopUpdate(void* userVarIn);
 
 static void btleCb_onReady(cxa_btle_client_t *const btlecIn, void* userVarIn);
 static void btleCb_onFailedInit(cxa_btle_client_t *const btlecIn, bool willAutoRetryIn, void* userVarIn);
-static void btleCb_onScanStart(void* userVarIn, bool wasSuccessfulIn);
+static void btleCb_onScanStart(bool wasSuccessfulIn, void* userVarIn);
 static void btleCb_onAdvertRx(cxa_btle_advPacket_t* packetIn, void* userVarIn);
 
 static cxa_btle_advField_t* findBeaconFieldInPacket(cxa_btle_advPacket_t* packetIn);
@@ -56,7 +56,9 @@ static cxa_btle_advField_t* findBeaconFieldInPacket(cxa_btle_advPacket_t* packet
 
 
 // ******** global function implementations ********
-void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *const btleClientIn, cxa_mqtt_rpc_node_t *const rpcNodeIn)
+void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn,
+							cxa_btle_client_t *const btleClientIn,
+							cxa_mqtt_rpc_node_t *const rpcNodeIn)
 {
 	cxa_assert(bmIn);
 	cxa_assert(btleClientIn);
@@ -75,8 +77,8 @@ void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn, cxa_btle_client_t *
 	bmIn->btleClient = btleClientIn;
 	cxa_btle_client_addListener(bmIn->btleClient, btleCb_onReady, btleCb_onFailedInit, (void*)bmIn);
 
-	// setup rpc if needed
-	if( rpcNodeIn != NULL ) ovr_beaconManager_rpcInterface_init(&bmIn->bmri, bmIn, rpcNodeIn);
+	// setup our RPC interface if needed
+	if( rpcNodeIn ) ovr_beaconManager_rpcInterface_init(&bmIn->bmri, bmIn, rpcNodeIn);
 
 	// add ourselves to the runloop
 	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bmIn);
@@ -140,8 +142,9 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 
 				cxa_eui48_string_t uuid_str;
 				cxa_eui48_toShortString(ovr_beaconProxy_getEui48(currProxy), &uuid_str);
-				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  temp_f: %d  batt:%d%% (%.02fV)  light: %d",
-						uuid_str.str, currUpdate->rssi_dBm, (int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0),
+				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  act: %d  temp_f: %d  batt:%d%% (%.02fV)  light: %d",
+						uuid_str.str, currUpdate->rssi_dBm, currUpdate->status.isActive,
+						(int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0),
 						currUpdate->batt_pcnt100, (float)currUpdate->batt_mv/1000.0, currUpdate->light_255);
 
 				// notify our listeners
@@ -265,6 +268,7 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
 	cxa_assert(bmIn);
 
+	// make sure we're always scanning
 	if( cxa_btle_client_isReady(bmIn->btleClient) &&
 		cxa_timeDiff_isElapsed_recurring_ms(&bmIn->td_scanningCheck, SCAN_CHECK_PERIOD_MS) &&
 		!cxa_btle_client_isScanning(bmIn->btleClient) )
@@ -299,7 +303,7 @@ static void btleCb_onFailedInit(cxa_btle_client_t *const btlecIn, bool willAutoR
 }
 
 
-static void btleCb_onScanStart(void* userVarIn, bool wasSuccessfulIn)
+static void btleCb_onScanStart(bool wasSuccessfulIn, void* userVarIn)
 {
 	ovr_beaconManager_t* bmIn = (ovr_beaconManager_t*)userVarIn;
 	cxa_assert(bmIn);

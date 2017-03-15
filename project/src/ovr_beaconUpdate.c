@@ -48,8 +48,9 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 
 	uint8_t status_raw;
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 7, status_raw) ) return false;
-	updateIn->status.isEnumerating = status_raw & (1 << 7);
-	updateIn->status.needsPoll = status_raw & (1 << 6);
+	updateIn->status.isCharging = status_raw & (1 << 7);
+	updateIn->status.isEnumerating = status_raw & (1 << 6);
+	updateIn->status.isActive = status_raw & (1 << 5);
 
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 8, updateIn->batt_pcnt100) ) return false;
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 9, updateIn->currTemp_c) ) return false;
@@ -57,6 +58,38 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 	if( !cxa_fixedByteBuffer_get_uint16LE(fbbIn, 11, updateIn->batt_mv) ) return false;
 
 	return true;
+}
+
+
+bool ovr_beaconUpdate_getIsCharging(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->status.isCharging;
+}
+
+
+bool ovr_beaconUpdate_getIsEnumerating(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->status.isEnumerating;
+}
+
+
+bool ovr_beaconUpdate_getIsActive(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->status.isActive;
+}
+
+
+void ovr_beaconUpdate_setIsActive(ovr_beaconUpdate_t *const updateIn, bool isActiveIn)
+{
+	cxa_assert(updateIn);
+
+	updateIn->status.isActive = isActiveIn;
 }
 
 

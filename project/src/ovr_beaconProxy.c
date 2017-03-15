@@ -24,6 +24,10 @@
 #include <cxa_criticalSection.h>
 
 
+#define CXA_LOG_LEVEL			CXA_LOG_LEVEL_TRACE
+#include <cxa_logger_implementation.h>
+
+
 // ******** local macro definitions ********
 #ifndef OVR_BEACONPROXY_LOSTTIMEOUT_MS
 	#define OVR_BEACONPROXY_LOSTTIMEOUT_MS			60000
@@ -48,6 +52,8 @@ bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpda
 	// save our update and update our pointers
 	// pointers shouldn't change...even after updates
 	memcpy(&beaconProxyIn->lastUpdate, updateIn, sizeof(beaconProxyIn->lastUpdate));
+
+	beaconProxyIn->hasActivityPending = ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate);
 
 	// last but not least, start our timeDiff
 	cxa_timeDiff_init(&beaconProxyIn->td_lastUpdate);
@@ -80,6 +86,18 @@ ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaco
 }
 
 
+bool ovr_beaconProxy_checkAndResetPendingActivity(ovr_beaconProxy_t *const beaconProxyIn)
+{
+	cxa_assert(beaconProxyIn);
+
+	bool pendingActivity = beaconProxyIn->hasActivityPending;
+
+	beaconProxyIn->hasActivityPending = ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate);
+
+	return pendingActivity;
+}
+
+
 void ovr_beaconProxy_update(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(beaconProxyIn);
@@ -87,6 +105,11 @@ void ovr_beaconProxy_update(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUp
 
 	memcpy(&beaconProxyIn->lastUpdate, updateIn, sizeof(beaconProxyIn->lastUpdate));
 	cxa_timeDiff_setStartTime_now(&beaconProxyIn->td_lastUpdate);
+
+	if( ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate) )
+	{
+		beaconProxyIn->hasActivityPending = true;
+	}
 }
 
 
