@@ -53,7 +53,7 @@ bool ovr_beaconProxy_init(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUpda
 	// pointers shouldn't change...even after updates
 	memcpy(&beaconProxyIn->lastUpdate, updateIn, sizeof(beaconProxyIn->lastUpdate));
 
-	beaconProxyIn->hasActivityPending = ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate);
+	beaconProxyIn->cachedAccelStatus = ovr_beaconUpdate_getAccelStatus(&beaconProxyIn->lastUpdate);
 
 	// last but not least, start our timeDiff
 	cxa_timeDiff_init(&beaconProxyIn->td_lastUpdate);
@@ -86,15 +86,19 @@ ovr_beaconUpdate_t* ovr_beaconProxy_getLastUpdate(ovr_beaconProxy_t *const beaco
 }
 
 
-bool ovr_beaconProxy_checkAndResetPendingActivity(ovr_beaconProxy_t *const beaconProxyIn)
+ovr_beaconProxy_accelStatus_t ovr_beaconProxy_checkAndResetAccelStatus(ovr_beaconProxy_t *const beaconProxyIn)
 {
 	cxa_assert(beaconProxyIn);
 
-	bool pendingActivity = beaconProxyIn->hasActivityPending;
+	ovr_beaconProxy_accelStatus_t cachedStatus = beaconProxyIn->cachedAccelStatus;
 
-	beaconProxyIn->hasActivityPending = ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate);
+	ovr_beaconUpdate_t* lastUpdate = ovr_beaconProxy_getLastUpdate(beaconProxyIn);
+	if( lastUpdate != NULL )
+	{
+		beaconProxyIn->cachedAccelStatus = ovr_beaconUpdate_getAccelStatus(lastUpdate);
+	}
 
-	return pendingActivity;
+	return cachedStatus;
 }
 
 
@@ -106,10 +110,12 @@ void ovr_beaconProxy_update(ovr_beaconProxy_t *const beaconProxyIn, ovr_beaconUp
 	memcpy(&beaconProxyIn->lastUpdate, updateIn, sizeof(beaconProxyIn->lastUpdate));
 	cxa_timeDiff_setStartTime_now(&beaconProxyIn->td_lastUpdate);
 
-	if( ovr_beaconUpdate_getIsActive(&beaconProxyIn->lastUpdate) )
-	{
-		beaconProxyIn->hasActivityPending = true;
-	}
+	// latch each status bit to 1 if needed
+	ovr_beaconProxy_accelStatus_t newStatus = ovr_beaconUpdate_getAccelStatus(&beaconProxyIn->lastUpdate);
+	if( !beaconProxyIn->cachedAccelStatus.hasOccurred_1tap ) beaconProxyIn->cachedAccelStatus.hasOccurred_1tap = newStatus.hasOccurred_1tap;
+	if( !beaconProxyIn->cachedAccelStatus.hasOccurred_2tap ) beaconProxyIn->cachedAccelStatus.hasOccurred_1tap = newStatus.hasOccurred_2tap;
+	if( !beaconProxyIn->cachedAccelStatus.hasOccurred_activity ) beaconProxyIn->cachedAccelStatus.hasOccurred_1tap = newStatus.hasOccurred_activity;
+	if( !beaconProxyIn->cachedAccelStatus.hasOccurred_freeFall ) beaconProxyIn->cachedAccelStatus.hasOccurred_1tap = newStatus.hasOccurred_freeFall;
 }
 
 

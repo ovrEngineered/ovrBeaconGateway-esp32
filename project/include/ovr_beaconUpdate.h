@@ -38,8 +38,24 @@ typedef struct
 {
 	bool isCharging;
 	bool isEnumerating;
-	bool isActive;
-}ovr_beaconProxy_status_t;
+
+	bool accelError;
+	bool tempError;
+	bool lightError;
+
+	bool isAccelEnabled;
+	bool isTempEnabled;
+	bool isLightEnabled;
+}ovr_beaconProxy_deviceStatus_t;
+
+
+typedef struct
+{
+	bool hasOccurred_activity;
+	bool hasOccurred_1tap;
+	bool hasOccurred_2tap;
+	bool hasOccurred_freeFall;
+}ovr_beaconProxy_accelStatus_t;
 
 
 typedef struct
@@ -49,12 +65,17 @@ typedef struct
 	ovr_beaconProxy_devType_t devType;
 	cxa_eui48_t uuid;
 
-	ovr_beaconProxy_status_t status;
+	ovr_beaconProxy_deviceStatus_t devStatus;
+	uint8_t status_raw;
+
+	ovr_beaconProxy_accelStatus_t accelStatus;
+	uint8_t accelStatus_raw;
+
 	uint8_t batt_pcnt100;
-	uint8_t currTemp_c;
-	uint8_t light_255;
 	uint16_t batt_mv;
 
+	uint16_t currTemp_deciDegC;
+	uint8_t light_255;
 }ovr_beaconUpdate_t;
 
 
@@ -63,13 +84,19 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 
 bool ovr_beaconUpdate_getIsCharging(ovr_beaconUpdate_t *const updateIn);
 bool ovr_beaconUpdate_getIsEnumerating(ovr_beaconUpdate_t *const updateIn);
-bool ovr_beaconUpdate_getIsActive(ovr_beaconUpdate_t *const updateIn);
+
+bool ovr_beaconUpdate_hasError(ovr_beaconUpdate_t *const updateIn);
+ovr_beaconProxy_deviceStatus_t ovr_beaconUpdate_getDeviceStatus(ovr_beaconUpdate_t *const updateIn);
+uint8_t ovr_beaconUpdate_getStatusByte(ovr_beaconUpdate_t *const updateIn);
+
+ovr_beaconProxy_accelStatus_t ovr_beaconUpdate_getAccelStatus(ovr_beaconUpdate_t *const updateIn);
 
 uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn);
-uint16_t ovr_beaconUpdate_getBattery_mv(ovr_beaconUpdate_t *const updateIn);
+float ovr_beaconUpdate_getBattery_v(ovr_beaconUpdate_t *const updateIn);
 int8_t ovr_beaconUpdate_getRssi(ovr_beaconUpdate_t *const updateIn);
-uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn);
+float ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn);
 uint8_t ovr_beaconUpdate_getLight_255(ovr_beaconUpdate_t *const updateIn);
+
 cxa_eui48_t* ovr_beaconUpdate_getEui48(ovr_beaconUpdate_t *const updateIn);
 
 #endif

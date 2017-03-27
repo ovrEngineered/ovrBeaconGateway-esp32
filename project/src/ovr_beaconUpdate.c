@@ -46,16 +46,27 @@ bool ovr_beaconUpdate_init(ovr_beaconUpdate_t *const updateIn, int8_t rssi_dBmIn
 
 	if( !cxa_eui48_initFromBuffer(&updateIn->uuid, fbbIn, 1) ) return false;
 
-	uint8_t status_raw;
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 7, status_raw) ) return false;
-	updateIn->status.isCharging = status_raw & (1 << 7);
-	updateIn->status.isEnumerating = status_raw & (1 << 6);
-	updateIn->status.isActive = status_raw & (1 << 5);
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 7, updateIn->status_raw) ) return false;
+	updateIn->devStatus.isCharging = updateIn->status_raw & (1 << 7);
+	updateIn->devStatus.isEnumerating = updateIn->status_raw & (1 << 6);
+	updateIn->devStatus.accelError = updateIn->status_raw & (1 << 5);
+	updateIn->devStatus.tempError = updateIn->status_raw & (1 << 4);
+	updateIn->devStatus.lightError = updateIn->status_raw & (1 << 3);
+	updateIn->devStatus.isAccelEnabled = updateIn->status_raw & (1 << 2);
+	updateIn->devStatus.isTempEnabled = updateIn->status_raw & (1 << 1);
+	updateIn->devStatus.isLightEnabled = updateIn->status_raw & (1 << 0);
 
 	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 8, updateIn->batt_pcnt100) ) return false;
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 9, updateIn->currTemp_c) ) return false;
-	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 10, updateIn->light_255) ) return false;
-	if( !cxa_fixedByteBuffer_get_uint16LE(fbbIn, 11, updateIn->batt_mv) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint16LE(fbbIn, 9, updateIn->currTemp_deciDegC) ) return false;
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 11, updateIn->light_255) ) return false;
+
+	if( !cxa_fixedByteBuffer_get_uint8(fbbIn, 12, updateIn->accelStatus_raw) ) return false;
+	updateIn->accelStatus.hasOccurred_freeFall = updateIn->accelStatus_raw & (1 << 3);
+	updateIn->accelStatus.hasOccurred_2tap = updateIn->accelStatus_raw & (1 << 2);
+	updateIn->accelStatus.hasOccurred_1tap = updateIn->accelStatus_raw & (1 << 1);
+	updateIn->accelStatus.hasOccurred_activity = updateIn->accelStatus_raw & (1 << 0);
+
+	if( !cxa_fixedByteBuffer_get_uint16LE(fbbIn, 13, updateIn->batt_mv) ) return false;
 
 	return true;
 }
@@ -65,7 +76,7 @@ bool ovr_beaconUpdate_getIsCharging(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	return updateIn->status.isCharging;
+	return updateIn->devStatus.isCharging;
 }
 
 
@@ -73,23 +84,37 @@ bool ovr_beaconUpdate_getIsEnumerating(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	return updateIn->status.isEnumerating;
+	return updateIn->devStatus.isEnumerating;
 }
 
 
-bool ovr_beaconUpdate_getIsActive(ovr_beaconUpdate_t *const updateIn)
+bool ovr_beaconUpdate_hasError(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	return updateIn->status.isActive;
+	return updateIn->devStatus.accelError | updateIn->devStatus.tempError | updateIn->devStatus.lightError;
 }
 
 
-void ovr_beaconUpdate_setIsActive(ovr_beaconUpdate_t *const updateIn, bool isActiveIn)
+ovr_beaconProxy_deviceStatus_t ovr_beaconUpdate_getDeviceStatus(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	updateIn->status.isActive = isActiveIn;
+	return updateIn->devStatus;
+}
+
+
+uint8_t ovr_beaconUpdate_getStatusByte(ovr_beaconUpdate_t *const updateIn)
+{
+	cxa_assert(updateIn);
+
+	return updateIn->status_raw;
+}
+
+
+ovr_beaconProxy_accelStatus_t ovr_beaconUpdate_getAccelStatus(ovr_beaconUpdate_t *const updateIn)
+{
+	return updateIn->accelStatus;
 }
 
 
@@ -101,11 +126,11 @@ uint8_t ovr_beaconUpdate_getBattery_pcnt100(ovr_beaconUpdate_t *const updateIn)
 }
 
 
-uint16_t ovr_beaconUpdate_getBattery_mv(ovr_beaconUpdate_t *const updateIn)
+float ovr_beaconUpdate_getBattery_v(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	return updateIn->batt_mv;
+	return ((float)updateIn->batt_mv) / 1000.0;
 }
 
 
@@ -117,11 +142,11 @@ int8_t ovr_beaconUpdate_getRssi(ovr_beaconUpdate_t *const updateIn)
 }
 
 
-uint8_t ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn)
+float ovr_beaconUpdate_getTemp_c(ovr_beaconUpdate_t *const updateIn)
 {
 	cxa_assert(updateIn);
 
-	return updateIn->currTemp_c;
+	return updateIn->currTemp_deciDegC / 10.0;
 }
 
 

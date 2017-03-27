@@ -139,8 +139,8 @@ static void sysInit()
 
 	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
 	cxa_tempSensor_si7050_init(&tempSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
-
 	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
+//	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, NULL, NULL, NULL);
 
 	// schedule our user task for execution
 	xTaskCreate(userTask, (const char * const)"usrTask", 4096, NULL, tskIDLE_PRIORITY, NULL);

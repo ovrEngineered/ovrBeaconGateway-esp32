@@ -80,7 +80,7 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		snprintf(timestamp_str, sizeof(timestamp_str), "%d", cxa_sntpClient_getUnixTimeStamp());
 		timestamp_str[sizeof(timestamp_str)-1] = 0;
 
-		char temp_str[4];
+		char temp_str[6];
 		snprintf(temp_str, sizeof(temp_str), "%.2f", ovr_beaconGateway_getLastTemp_degC(bgriIn->bg));
 		temp_str[sizeof(temp_str)-1] = 0;
 
@@ -100,6 +100,6 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		if( !cxa_stringUtils_concat(notiPayload, light_str, sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
 
-		cxa_mqtt_rpc_node_publishNotification(bgriIn->rpcNode, "onBeaconUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
+		cxa_mqtt_rpc_node_publishNotification(bgriIn->rpcNode, "onBeaconGatewayUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
 	}
 }

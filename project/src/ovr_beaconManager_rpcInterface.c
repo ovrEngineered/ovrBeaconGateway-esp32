@@ -88,68 +88,46 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 
 			ovr_beaconUpdate_t* lastUpdate = ovr_beaconProxy_getLastUpdate(currBeacon);
 			if( lastUpdate == NULL ) continue;
+			ovr_beaconProxy_deviceStatus_t devStatus = ovr_beaconUpdate_getDeviceStatus(lastUpdate);
 
-			// get our individual strings together
+			// form our notification payload string
+			char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "{";
+
 			char* gatewayUniqueId = cxa_uniqueId_getHexString();
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), "\"gatewayId\":\"%s\"", gatewayUniqueId) ) return;
 
-			char timestamp_str[11];
-			snprintf(timestamp_str, sizeof(timestamp_str), "%d", cxa_sntpClient_getUnixTimeStamp());
-			timestamp_str[sizeof(timestamp_str)-1] = 0;
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"timestamp\":%d", cxa_sntpClient_getUnixTimeStamp()) ) return;
 
 			cxa_eui48_string_t uuid_str;
 			cxa_eui48_toString(ovr_beaconProxy_getEui48(currBeacon), &uuid_str);
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"beaconId\":\"%s\"", uuid_str.str) ) return;
 
-			char isCharging_str[2];
-			snprintf(isCharging_str, sizeof(isCharging_str), "%d", ovr_beaconUpdate_getIsCharging(lastUpdate));
-			isCharging_str[sizeof(isCharging_str)-1] = 0;
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"rssi\":%d", ovr_beaconUpdate_getRssi(lastUpdate)) ) return;
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"isCharging\":%d", ovr_beaconUpdate_getIsCharging(lastUpdate)) ) return;
 
-			char isActive_str[2];
-			snprintf(isActive_str, sizeof(isActive_str), "%d", ovr_beaconProxy_checkAndResetPendingActivity(currBeacon));
-			isActive_str[sizeof(isActive_str)-1] = 0;
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"batt_pcnt100\":%d", ovr_beaconUpdate_getBattery_pcnt100(lastUpdate)) ) return;
+			if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"batt_v\":%0.2f", ovr_beaconUpdate_getBattery_v(lastUpdate)) ) return;
 
-			char rssi_str[5];
-			snprintf(rssi_str, sizeof(rssi_str), "%d", ovr_beaconUpdate_getRssi(lastUpdate));
-			rssi_str[sizeof(rssi_str)-1] = 0;
+			if( devStatus.isAccelEnabled )
+			{
+				ovr_beaconProxy_accelStatus_t accelStatus = ovr_beaconProxy_checkAndResetAccelStatus(currBeacon);
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"activity\":%d", accelStatus.hasOccurred_activity) ) return;
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"1tap\":%d", accelStatus.hasOccurred_1tap) ) return;
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"2tap\":%d", accelStatus.hasOccurred_2tap) ) return;
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"freeFall\":%d", accelStatus.hasOccurred_freeFall) ) return;
+			}
 
-			char temp_str[4];
-			snprintf(temp_str, sizeof(temp_str), "%d", ovr_beaconUpdate_getTemp_c(lastUpdate));
-			temp_str[sizeof(temp_str)-1] = 0;
+			if( devStatus.isTempEnabled )
+			{
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"temp_c\":%.1f", ovr_beaconUpdate_getTemp_c(lastUpdate)) ) return;
+			}
 
-			char light_str[4];
-			snprintf(light_str, sizeof(light_str), "%d", ovr_beaconUpdate_getLight_255(lastUpdate));
-			light_str[sizeof(light_str)-1] = 0;
+			if( devStatus.isLightEnabled )
+			{
+				if( !cxa_stringUtils_concat_formattedString(notiPayload, sizeof(notiPayload), ",\"light_255\":%d", ovr_beaconUpdate_getLight_255(lastUpdate)) ) return;
+			}
 
-			char battPcnt_str[4];
-			snprintf(battPcnt_str, sizeof(battPcnt_str), "%d", ovr_beaconUpdate_getBattery_pcnt100(lastUpdate));
-			battPcnt_str[sizeof(battPcnt_str)-1] = 0;
-
-			char battV_str[6];
-			snprintf(battV_str, sizeof(battV_str), "%0.2f", (float)ovr_beaconUpdate_getBattery_mv(lastUpdate)/1000.0);
-			battV_str[sizeof(battV_str)-1] = 0;
-
-			// combine into one payload string
-			char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
-			if( !cxa_stringUtils_concat(notiPayload, "{\"gatewayId\":\"", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, gatewayUniqueId, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, "\",\"timestamp\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"beaconId\":\"", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, uuid_str.str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, "\",\"rssi\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, rssi_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"isActive\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, isActive_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"isCharging\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, isCharging_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"temp_c\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, temp_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"light_255\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, light_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"batt_pcnt100\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, battPcnt_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, ",\"batt_v\":", sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, battV_str, sizeof(notiPayload)) ) return;
-			if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload))  )return;
 
 			cxa_mqtt_rpc_node_publishNotification(bmriIn->rpcNode, "onBeaconUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
 		}

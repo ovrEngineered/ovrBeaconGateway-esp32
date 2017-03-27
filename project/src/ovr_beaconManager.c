@@ -19,6 +19,7 @@
 // ******** includes ********
 #include <cxa_assert.h>
 #include <cxa_runLoop.h>
+#include <cxa_tempSensor.h>
 
 #include <ovr_beaconProxy.h>
 
@@ -27,7 +28,7 @@
 
 
 // ******** local macro definitions ********
-#define COMPANY_ID						0xFFFF
+#define COMPANY_ID						0x04A2
 #define SCAN_CHECK_PERIOD_MS			10000
 
 
@@ -142,10 +143,13 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 
 				cxa_eui48_string_t uuid_str;
 				cxa_eui48_toShortString(ovr_beaconProxy_getEui48(currProxy), &uuid_str);
-				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  act: %d  temp_f: %d  batt:%d%% (%.02fV)  light: %d",
-						uuid_str.str, currUpdate->rssi_dBm, currUpdate->status.isActive,
-						(int8_t)((float)currUpdate->currTemp_c * 1.8 + 32.0),
-						currUpdate->batt_pcnt100, (float)currUpdate->batt_mv/1000.0, currUpdate->light_255);
+				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  ds: 0x%02X  as: 0x%02X t: %.1f  b:%d%% (%.02fV)  l: %d",
+						uuid_str.str, currUpdate->rssi_dBm,
+						ovr_beaconUpdate_getStatusByte(currUpdate),
+						ovr_beaconUpdate_getAccelStatus(currUpdate),
+						CXA_TEMPSENSE_CTOF(ovr_beaconUpdate_getTemp_c(currUpdate)),
+						currUpdate->batt_pcnt100, (float)currUpdate->batt_mv/1000.0,
+						currUpdate->light_255);
 
 				// notify our listeners
 				notifyListeners_onUpdate(bmIn, currProxy);
