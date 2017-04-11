@@ -38,12 +38,11 @@
 #define UPDATE_PERIOD_MS						60000
 
 
+
 // ******** local type definitions ********
 
 
 // ******** local function prototypes ********
-
-
 static void cb_onRunLoopUpdate(void* userVarIn);
 static void beaconCb_onBeaconFound(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn);
 static void beaconCb_onBeaconLost(ovr_beaconProxy_t *const beaconProxyIn, void* userVarIn);

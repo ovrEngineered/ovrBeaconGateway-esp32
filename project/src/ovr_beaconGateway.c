@@ -20,7 +20,10 @@
 #include <math.h>
 
 #include <cxa_assert.h>
+#include <cxa_console.h>
+#include <cxa_network_wifiManager.h>
 #include <cxa_runLoop.h>
+#include <cxa_uniqueId.h>
 
 #define CXA_LOG_LEVEL			CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
@@ -36,6 +39,8 @@
 // ******** local function prototypes ********
 static void cb_onRunLoopUpdate(void* userVarIn);
 
+static void consoleCb_getUuid(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn);
+
 static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfulIn, float newTemp_degCIn, void* userVarIn);
 static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSuccessfulIn, uint8_t newLight_255In, void* userVarIn);
 
@@ -46,6 +51,8 @@ static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSucce
 // ******** global function implementations ********
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
+							cxa_rgbLed_t *const led_btleActIn,
+							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
 							cxa_tempSensor_t *const tempSensorIn,
 							cxa_mqtt_rpc_node_t *const rpcNodeIn)
@@ -60,8 +67,17 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 	bgIn->tempSensor = tempSensorIn;
 	cxa_timeDiff_init(&bgIn->td_readSensors);
 
+	// setup our beacon manager
 	ovr_beaconManager_init(&bgIn->beaconManager, btleClientIn, rpcNodeIn);
+
+	// setup our rpc interface
 	if( rpcNodeIn != NULL ) ovr_beaconGateway_rpcInterface_init(&bgIn->bgri, bgIn, rpcNodeIn);
+
+	// setup our UI
+	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, led_btleActIn, led_netActIn);
+
+	// register our console method
+	cxa_console_addCommand("gw_getUuid", "returns gateway's UUID", NULL, 0, consoleCb_getUuid, (void*)bgIn);
 
 	// schedule for repeated execution
 	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bgIn);
@@ -101,6 +117,15 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 			cxa_lightSensor_getValue_withCallback(bgIn->lightSensor, lightCb_onUpdated, (void*)bgIn);
 		}
 	}
+}
+
+
+static void consoleCb_getUuid(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn)
+{
+	ovr_beaconGateway_t* bgIn = (ovr_beaconGateway_t*)userVarIn;
+	cxa_assert(bgIn);
+
+	cxa_ioStream_writeFormattedLine(ioStreamIn, "gateway uuid: %s", cxa_uniqueId_getHexString());
 }
 
 

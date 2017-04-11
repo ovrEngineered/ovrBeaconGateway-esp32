@@ -19,11 +19,14 @@
 
 
 // ******** includes ********
+#include <cxa_led.h>
 #include <cxa_lightSensor.h>
 #include <cxa_logger_header.h>
+#include <cxa_rgbLed.h>
 #include <cxa_tempSensor.h>
 #include <cxa_timeDiff.h>
 
+#include <ovr_beaconGateway_ui.h>
 #include <ovr_beaconGateway_rpcInterface.h>
 #include <ovr_beaconManager.h>
 
@@ -49,6 +52,8 @@ struct ovr_beaconGateway
 
 	ovr_beaconGateway_rpcInterface_t bgri;
 
+	ovr_beaconGateway_ui_t bgui;
+
 	cxa_timeDiff_t td_readSensors;
 	cxa_lightSensor_t* lightSensor;
 	cxa_tempSensor_t* tempSensor;
@@ -63,6 +68,8 @@ struct ovr_beaconGateway
  */
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
+							cxa_rgbLed_t *const led_btleActIn,
+							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
 							cxa_tempSensor_t *const tempSensorIn,
 							cxa_mqtt_rpc_node_t *const rpcNodeIn);

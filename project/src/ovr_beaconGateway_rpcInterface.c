@@ -39,8 +39,6 @@
 
 
 // ******** local function prototypes ********
-
-
 static void cb_onRunLoopUpdate(void* userVarIn);
 
 

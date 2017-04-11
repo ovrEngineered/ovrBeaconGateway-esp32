@@ -143,7 +143,7 @@ static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 
 				cxa_eui48_string_t uuid_str;
 				cxa_eui48_toShortString(ovr_beaconProxy_getEui48(currProxy), &uuid_str);
-				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  ds: 0x%02X  as: 0x%02X t: %.1f  b:%d%% (%.02fV)  l: %d",
+				cxa_logger_debug(&bmIn->logger, "updated '%s'  rssi: %d  ds: 0x%02X  as: 0x%02X  t: %.1f  b:%d%% (%.02fV)  l: %d",
 						uuid_str.str, currUpdate->rssi_dBm,
 						ovr_beaconUpdate_getStatusByte(currUpdate),
 						ovr_beaconUpdate_getAccelStatus(currUpdate),
