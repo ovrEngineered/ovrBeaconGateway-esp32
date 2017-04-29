@@ -24,6 +24,7 @@
 #include <cxa_uniqueId.h>
 #include <cxa_uuid128.h>
 
+#include <ovr_beaconGateway.h>
 #include <ovr_beaconManager.h>
 #include <ovr_beaconProxy.h>
 #include <ovr_beaconUpdate.h>
@@ -68,7 +69,7 @@ void ovr_beaconManager_rpcInterface_init(ovr_beaconManager_rpcInterface_t *const
 	ovr_beaconManager_addListener(bmriIn->bm, beaconCb_onBeaconFound, NULL, beaconCb_onBeaconLost, (void*)bmriIn);
 
 	// register for runloop updates
-	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bmriIn);
+	cxa_runLoop_addEntry(OVR_GW_THREADID_NETWORK, cb_onRunLoopUpdate, (void*)bmriIn);
 }
 
 

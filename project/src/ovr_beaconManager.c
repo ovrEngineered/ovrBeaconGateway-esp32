@@ -22,6 +22,7 @@
 #include <cxa_tempSensor.h>
 
 #include <ovr_beaconProxy.h>
+#include <ovr_beaconGateway.h>
 
 #define CXA_LOG_LEVEL			CXA_LOG_LEVEL_TRACE
 #include <cxa_logger_implementation.h>
@@ -82,7 +83,7 @@ void ovr_beaconManager_init(ovr_beaconManager_t *const bmIn,
 	if( rpcNodeIn ) ovr_beaconManager_rpcInterface_init(&bmIn->bmri, bmIn, rpcNodeIn);
 
 	// add ourselves to the runloop
-	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bmIn);
+	cxa_runLoop_addEntry(OVR_GW_THREADID_BLUETOOTH, cb_onRunLoopUpdate, (void*)bmIn);
 }
 
 

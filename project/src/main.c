@@ -62,7 +62,9 @@
 
 // ******** local function prototypes ********
 static void sysInit();
-static void userTask(void *pvParameters);
+static void thread_network(void *pvParameters);
+static void thread_ui(void *pvParameters);
+static void thread_bluetooth(void *pvParameters);
 
 
 // ******** local variable declarations ********
@@ -119,17 +121,18 @@ static void sysInit()
 	cxa_esp32_timeBase_init();
 
 	// setup our console and logger
-	cxa_console_init("ovrBeacon Gateway", cxa_usart_getIoStream(&usart_debug.super));
+	cxa_console_init("ovrBeacon Gateway", cxa_usart_getIoStream(&usart_debug.super), OVR_GW_THREADID_UI);
 	cxa_logger_setGlobalIoStream(cxa_usart_getIoStream(&usart_debug.super));
 
 	// setup our networking
-	cxa_network_wifiManager_init();
+	cxa_network_wifiManager_init(OVR_GW_THREADID_NETWORK);
 	cxa_sntpClient_init();
 	cxa_mqtt_connManager_init_clientCert(NULL,
 										 MQTT_SERVER, MQTT_PORT,
 										 tls_server_root_cert, sizeof(tls_server_root_cert),
 										 tls_client_cert, sizeof(tls_client_cert),
-										 tls_client_key_private, sizeof(tls_client_key_private));
+										 tls_client_key_private, sizeof(tls_client_key_private),
+										 OVR_GW_THREADID_NETWORK);
 	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_mqtt_connManager_getMqttClient(), true, cxa_uniqueId_getHexString());
 
 	// setup our application-specific peripherals
@@ -139,7 +142,7 @@ static void sysInit()
 	cxa_led_gpio_init(&led_btleAct_r, &gpio_led_btleAct_r.super, true);
 	cxa_led_gpio_init(&led_btleAct_g, &gpio_led_btleAct_g.super, true);
 	cxa_led_gpio_init(&led_btleAct_b, &gpio_led_btleAct_b.super, true);
-	cxa_rgbLed_triLed_init(&led_btleAct, &led_btleAct_r.super, &led_btleAct_g.super, &led_btleAct_b.super);
+	cxa_rgbLed_triLed_init(&led_btleAct, &led_btleAct_r.super, &led_btleAct_g.super, &led_btleAct_b.super, OVR_GW_THREADID_UI);
 
 	cxa_esp32_gpio_init_output(&gpio_led_netAct_r, GPIO_NUM_32, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_esp32_gpio_init_output(&gpio_led_netAct_g, GPIO_NUM_33, CXA_GPIO_POLARITY_INVERTED, 0);
@@ -147,29 +150,46 @@ static void sysInit()
 	cxa_led_gpio_init(&led_netAct_r, &gpio_led_netAct_r.super, true);
 	cxa_led_gpio_init(&led_netAct_g, &gpio_led_netAct_g.super, true);
 	cxa_led_gpio_init(&led_netAct_b, &gpio_led_netAct_b.super, true);
-	cxa_rgbLed_triLed_init(&led_netAct, &led_netAct_r.super, &led_netAct_g.super, &led_netAct_b.super);
+	cxa_rgbLed_triLed_init(&led_netAct, &led_netAct_r.super, &led_netAct_g.super, &led_netAct_b.super, OVR_GW_THREADID_UI);
 
 	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_2, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_esp32_gpio_init_output(&gpio_btleRxEnable, GPIO_NUM_12, CXA_GPIO_POLARITY_INVERTED, 1);
 	cxa_esp32_gpio_init_output(&gpio_btleTxEnable, GPIO_NUM_13, CXA_GPIO_POLARITY_NONINVERTED, 1);
 
 	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, GPIO_NUM_17, GPIO_NUM_16, false);
-	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super), &gpio_btleReset.super);
+	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super),
+								  &gpio_btleReset.super, OVR_GW_THREADID_BLUETOOTH);
 
-	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
+	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient), OVR_GW_THREADID_BLUETOOTH);
 	cxa_tempSensor_si7050_init(&tempSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
 	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &led_btleAct.super, &led_netAct.super,
 						   &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
 
 	// schedule our user task for execution
-	xTaskCreate(userTask, (const char * const)"usrTask", 4096, NULL, tskIDLE_PRIORITY, NULL);
+	xTaskCreate(thread_network, (const char * const)"net", 4096, NULL, tskIDLE_PRIORITY, NULL);
+	xTaskCreate(thread_ui, (const char * const)"ui", 1024, NULL, tskIDLE_PRIORITY, NULL);
+	xTaskCreate(thread_bluetooth, (const char * const)"bt", 4096, NULL, tskIDLE_PRIORITY, NULL);
 }
 
 
-static void userTask(void *pvParameters)
+static void thread_network(void *pvParameters)
 {
 	cxa_network_wifiManager_startNormal();
 
 	// does not return
-	cxa_runLoop_execute();
+	cxa_runLoop_execute(OVR_GW_THREADID_NETWORK);
+}
+
+
+static void thread_ui(void *pvParameters)
+{
+	// does not return
+	cxa_runLoop_execute(OVR_GW_THREADID_UI);
+}
+
+
+static void thread_bluetooth(void *pvParameters)
+{
+	// does not return
+	cxa_runLoop_execute(OVR_GW_THREADID_BLUETOOTH);
 }

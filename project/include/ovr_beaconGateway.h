@@ -32,6 +32,9 @@
 
 
 // ******** global macro definitions ********
+#define OVR_GW_THREADID_NETWORK				1
+#define OVR_GW_THREADID_UI					2
+#define OVR_GW_THREADID_BLUETOOTH			3
 
 
 // ******** global type definitions *********

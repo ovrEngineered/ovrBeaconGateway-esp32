@@ -21,6 +21,7 @@
 // ******** includes ********
 #include <cxa_btle_client.h>
 #include <cxa_rgbLed.h>
+#include <ovr_beaconManager.h>
 
 
 // ******** global macro definitions ********
@@ -46,8 +47,9 @@ struct ovr_beaconGateway_ui
 
 
 // ******** global function prototypes ********
-void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn, cxa_btle_client_t *const btleClientIn,
-		cxa_rgbLed_t *const led_btleActIn, cxa_rgbLed_t *const led_netActIn);
+void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
+							   cxa_btle_client_t *const btleClientIn, ovr_beaconManager_t *const bmIn,
+							   cxa_rgbLed_t *const led_btleActIn, cxa_rgbLed_t *const led_netActIn);
 
 
 #endif

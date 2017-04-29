@@ -31,6 +31,7 @@
 
 // ******** local macro definitions ********
 #define SENSOR_READ_PERIOD_MS		60000
+//#define SENSOR_READ_PERIOD_MS		10000
 
 
 // ******** local type definitions ********
@@ -74,13 +75,13 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 	if( rpcNodeIn != NULL ) ovr_beaconGateway_rpcInterface_init(&bgIn->bgri, bgIn, rpcNodeIn);
 
 	// setup our UI
-	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, led_btleActIn, led_netActIn);
+	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, &bgIn->beaconManager, led_btleActIn, led_netActIn);
 
 	// register our console method
 	cxa_console_addCommand("gw_getUuid", "returns gateway's UUID", NULL, 0, consoleCb_getUuid, (void*)bgIn);
 
 	// schedule for repeated execution
-	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bgIn);
+	cxa_runLoop_addEntry(OVR_GW_THREADID_BLUETOOTH, cb_onRunLoopUpdate, (void*)bgIn);
 }
 
 

@@ -59,7 +59,7 @@ void ovr_beaconGateway_rpcInterface_init(ovr_beaconGateway_rpcInterface_t *const
 	cxa_timeDiff_init(&bgriIn->td_sendUpdate);
 
 	// register for runloop updates
-	cxa_runLoop_addEntry(cb_onRunLoopUpdate, (void*)bgriIn);
+	cxa_runLoop_addEntry(OVR_GW_THREADID_NETWORK, cb_onRunLoopUpdate, (void*)bgriIn);
 }
 
 
