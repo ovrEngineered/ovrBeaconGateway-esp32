@@ -24,20 +24,22 @@
 
 
 // ******** local macro definitions ********
-#define RGB_COLOR_UNKNOWN				0,   0,   0
-#define RGB_COLOR_ERROR					255, 0,   0
-#define RGB_COLOR_PROVISION				0,   255, 0
-#define RGB_COLOR_CONNECTING			0,   0,   255
-#define RGB_COLOR_CONNECTED				0,   0,   255
-#define RGB_COLOR_CONNECTED_ACT			0,   0,   0
+#define WIFI_RGBCOLOR_UNKNOWN				0,   0,   0
+#define WIFI_RGBCOLOR_ERROR					255, 0,   0
+#define WIFI_RGBCOLOR_PROVISION				0,   255, 0
+#define WIFI_RGBCOLOR_CONNECTING			0,   0,   255
+#define WIFI_RGBCOLOR_CONNECTED				0,   0,   255
+#define WIFI_RGBCOLOR_CONNECTED_ACT			0,   0,   0
 
-#define RGB_COLOR_IDLE  				0,   0,   255
+#define BTLE_RGBCOLOR_IDLE  				0,   0,   255
+#define BTLE_RGBCOLOR_ERROR					255, 0,   0
+#define BTLE_RGBCOLOR_CONNECTED_ACT  		0,   0,   0
 
 #define BLINKRATE_ERROR					100,  100
 #define BLINKRATE_PROVISION				900,  100
 #define BLINKRATE_CONNECTING			250,  250
 
-#define FLASHPERIOD_ACT_MS				250
+#define FLASHPERIOD_ACT_MS				100
 
 
 // ******** local type definitions ********
@@ -77,8 +79,8 @@ void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
 
 	// set our initial state
 	bguiIn->networkError = false;
-	cxa_rgbLed_setRgb(bguiIn->led_btleAct, RGB_COLOR_UNKNOWN);
-	cxa_rgbLed_setRgb(bguiIn->led_netAct, RGB_COLOR_UNKNOWN);
+	cxa_rgbLed_setRgb(bguiIn->led_btleAct, WIFI_RGBCOLOR_UNKNOWN);
+	cxa_rgbLed_setRgb(bguiIn->led_netAct, WIFI_RGBCOLOR_UNKNOWN);
 
 	// register for wifi callbacks
 	cxa_network_wifiManager_addListener(NULL, wifiCb_onProvisioning, wifiCb_onAssociating,
@@ -107,7 +109,7 @@ static void wifiCb_onProvisioning(void* userVarIn)
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, RGB_COLOR_PROVISION, BLINKRATE_PROVISION);
+	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_PROVISION, BLINKRATE_PROVISION);
 }
 
 
@@ -118,7 +120,7 @@ static void wifiCb_onAssociating(const char *const ssidIn, void* userVarIn)
 
 	if( !bguiIn->networkError )
 	{
-		if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, RGB_COLOR_CONNECTING, BLINKRATE_CONNECTING);
+		if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_CONNECTING, BLINKRATE_CONNECTING);
 	}
 }
 
@@ -129,7 +131,7 @@ static void wifiCb_onAssociationFailed(const char *const ssidIn, void* userVarIn
 	cxa_assert(bguiIn);
 
 	bguiIn->networkError = true;
-	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, RGB_COLOR_ERROR, BLINKRATE_ERROR);
+	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_ERROR, BLINKRATE_ERROR);
 }
 
 
@@ -139,7 +141,7 @@ static void mqttCb_onConnect(cxa_mqtt_client_t *const clientIn, void* userVarIn)
 	cxa_assert(bguiIn);
 
 	bguiIn->networkError = false;
-	if( bguiIn->led_netAct ) cxa_rgbLed_setRgb(bguiIn->led_netAct, RGB_COLOR_CONNECTED);
+	if( bguiIn->led_netAct ) cxa_rgbLed_setRgb(bguiIn->led_netAct, WIFI_RGBCOLOR_CONNECTED);
 }
 
 
@@ -149,7 +151,7 @@ static void mqttCb_onConnectFailed(cxa_mqtt_client_t *const clientIn, cxa_mqtt_c
 	cxa_assert(bguiIn);
 
 	bguiIn->networkError = true;
-	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, RGB_COLOR_ERROR, BLINKRATE_ERROR);
+	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_ERROR, BLINKRATE_ERROR);
 }
 
 
@@ -158,7 +160,7 @@ static void mqttCb_onDisconnect(cxa_mqtt_client_t *const clientIn, void* userVar
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, RGB_COLOR_CONNECTING, BLINKRATE_CONNECTING);
+	if( bguiIn->led_netAct ) cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_CONNECTING, BLINKRATE_CONNECTING);
 }
 
 
@@ -167,7 +169,7 @@ static void mqttCb_onPingRespRx(cxa_mqtt_client_t *const clientIn, void* userVar
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_netAct ) cxa_rgbLed_flashOnce(bguiIn->led_netAct, RGB_COLOR_CONNECTED_ACT, FLASHPERIOD_ACT_MS);
+	if( bguiIn->led_netAct ) cxa_rgbLed_flashOnce(bguiIn->led_netAct, WIFI_RGBCOLOR_CONNECTED_ACT, FLASHPERIOD_ACT_MS);
 }
 
 
@@ -176,7 +178,7 @@ static void btleCb_onReady(cxa_btle_client_t *const btlecIn, void* userVarIn)
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_btleAct ) cxa_rgbLed_setRgb(bguiIn->led_btleAct, RGB_COLOR_IDLE);
+	if( bguiIn->led_btleAct ) cxa_rgbLed_setRgb(bguiIn->led_btleAct, BTLE_RGBCOLOR_IDLE);
 }
 
 
@@ -185,7 +187,7 @@ static void btleCb_onFailedInit(cxa_btle_client_t *const btlecIn, bool willAutoR
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_btleAct ) cxa_rgbLed_blink(bguiIn->led_btleAct, RGB_COLOR_ERROR, BLINKRATE_ERROR);
+	if( bguiIn->led_btleAct ) cxa_rgbLed_blink(bguiIn->led_btleAct, BTLE_RGBCOLOR_ERROR, BLINKRATE_ERROR);
 }
 
 
@@ -194,5 +196,5 @@ static void beaconManagerCb_onBeaconUpdate(ovr_beaconProxy_t *const beaconProxyI
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	if( bguiIn->led_btleAct ) cxa_rgbLed_flashOnce(bguiIn->led_btleAct, RGB_COLOR_CONNECTED_ACT, FLASHPERIOD_ACT_MS);
+	if( bguiIn->led_btleAct ) cxa_rgbLed_flashOnce(bguiIn->led_btleAct, BTLE_RGBCOLOR_CONNECTED_ACT, FLASHPERIOD_ACT_MS);
 }
