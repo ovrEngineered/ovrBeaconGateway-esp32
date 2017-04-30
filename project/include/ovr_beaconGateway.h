@@ -78,6 +78,7 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_mqtt_rpc_node_t *const rpcNodeIn);
 
 
+bool ovr_beaconGateway_isBeaconRadioReady(ovr_beaconGateway_t *const bgIn);
 float ovr_beaconGateway_getLastTemp_degC(ovr_beaconGateway_t *const bgIn);
 uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn);
 

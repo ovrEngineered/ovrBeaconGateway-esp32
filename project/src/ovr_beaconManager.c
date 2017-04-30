@@ -116,6 +116,14 @@ cxa_array_t* ovr_beaconManager_getKnownBeacons(ovr_beaconManager_t *const bmIn)
 }
 
 
+bool ovr_beaconManager_isRadioReady(ovr_beaconManager_t *const bmIn)
+{
+	cxa_assert(bmIn);
+
+	return cxa_btle_client_isReady(bmIn->btleClient);
+}
+
+
 // ******** local function implementations ********
 static void processRxUpdateFifo(ovr_beaconManager_t *const bmIn)
 {

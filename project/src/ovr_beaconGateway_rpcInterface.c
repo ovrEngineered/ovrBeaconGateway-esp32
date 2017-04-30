@@ -17,6 +17,8 @@
 
 
 // ******** includes ********
+#include <math.h>
+
 #include <cxa_assert.h>
 #include <cxa_runLoop.h>
 #include <cxa_sntpClient.h>
@@ -78,8 +80,12 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		snprintf(timestamp_str, sizeof(timestamp_str), "%d", cxa_sntpClient_getUnixTimeStamp());
 		timestamp_str[sizeof(timestamp_str)-1] = 0;
 
-		char temp_str[6];
-		snprintf(temp_str, sizeof(temp_str), "%.2f", ovr_beaconGateway_getLastTemp_degC(bgriIn->bg));
+		char isRadioReady_str[2];
+		snprintf(isRadioReady_str, sizeof(isRadioReady_str), "%d", ovr_beaconGateway_isBeaconRadioReady(bgriIn->bg));
+		isRadioReady_str[sizeof(isRadioReady_str)-1] = 0;
+
+		char temp_str[8];
+		snprintf(temp_str, sizeof(temp_str), "%.02f", ovr_beaconGateway_getLastTemp_degC(bgriIn->bg));
 		temp_str[sizeof(temp_str)-1] = 0;
 
 		char light_str[4];
@@ -92,10 +98,18 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		if( !cxa_stringUtils_concat(notiPayload, gatewayUniqueId, sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, "\",\"timestamp\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, ",\"temp_c\":", sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, temp_str, sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, ",\"light_255\":", sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, light_str, sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, ",\"isBeaconRadioReady\":", sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, isRadioReady_str, sizeof(notiPayload)) ) return;
+
+		if( ovr_beaconGateway_isBeaconRadioReady(bgriIn->bg) )
+		{
+			if( !cxa_stringUtils_concat(notiPayload, ",\"temp_c\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, temp_str, sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, ",\"light_255\":", sizeof(notiPayload)) ) return;
+			if( !cxa_stringUtils_concat(notiPayload, light_str, sizeof(notiPayload)) ) return;
+		}
+
+
 		if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
 
 		cxa_mqtt_rpc_node_publishNotification(bgriIn->rpcNode, "onBeaconGatewayUpdate", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));

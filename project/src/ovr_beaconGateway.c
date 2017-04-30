@@ -85,6 +85,13 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 }
 
 
+bool ovr_beaconGateway_isBeaconRadioReady(ovr_beaconGateway_t *const bgIn)
+{
+	cxa_assert(bgIn);
+	return ovr_beaconManager_isRadioReady(&bgIn->beaconManager);
+}
+
+
 float ovr_beaconGateway_getLastTemp_degC(ovr_beaconGateway_t *const bgIn)
 {
 	cxa_assert(bgIn);
