@@ -85,8 +85,7 @@ static cxa_led_gpio_t led_netAct_b;
 static cxa_rgbLed_triLed_t led_netAct;
 
 static cxa_esp32_gpio_t gpio_btleReset;
-static cxa_esp32_gpio_t gpio_btleRxEnable;
-static cxa_esp32_gpio_t gpio_btleTxEnable;
+static cxa_esp32_gpio_t gpio_swProvision;
 
 static cxa_esp32_usart_t usart_debug;
 
@@ -136,15 +135,15 @@ static void sysInit()
 	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_mqtt_connManager_getMqttClient(), true, cxa_uniqueId_getHexString());
 
 	// setup our application-specific peripherals
-	cxa_esp32_gpio_init_output(&gpio_led_btleAct_r, GPIO_NUM_14, CXA_GPIO_POLARITY_INVERTED, 0);
-	cxa_esp32_gpio_init_output(&gpio_led_btleAct_g, GPIO_NUM_27, CXA_GPIO_POLARITY_INVERTED, 0);
-	cxa_esp32_gpio_init_output(&gpio_led_btleAct_b, GPIO_NUM_27, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_btleAct_r, GPIO_NUM_32, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_btleAct_g, GPIO_NUM_23, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_btleAct_b, GPIO_NUM_22, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_led_gpio_init(&led_btleAct_r, &gpio_led_btleAct_r.super, true);
 	cxa_led_gpio_init(&led_btleAct_g, &gpio_led_btleAct_g.super, true);
 	cxa_led_gpio_init(&led_btleAct_b, &gpio_led_btleAct_b.super, true);
 	cxa_rgbLed_triLed_init(&led_btleAct, &led_btleAct_r.super, &led_btleAct_g.super, &led_btleAct_b.super, OVR_GW_THREADID_UI);
 
-	cxa_esp32_gpio_init_output(&gpio_led_netAct_r, GPIO_NUM_32, CXA_GPIO_POLARITY_INVERTED, 0);
+	cxa_esp32_gpio_init_output(&gpio_led_netAct_r, GPIO_NUM_26, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_esp32_gpio_init_output(&gpio_led_netAct_g, GPIO_NUM_33, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_esp32_gpio_init_output(&gpio_led_netAct_b, GPIO_NUM_25, CXA_GPIO_POLARITY_INVERTED, 0);
 	cxa_led_gpio_init(&led_netAct_r, &gpio_led_netAct_r.super, true);
@@ -152,9 +151,8 @@ static void sysInit()
 	cxa_led_gpio_init(&led_netAct_b, &gpio_led_netAct_b.super, true);
 	cxa_rgbLed_triLed_init(&led_netAct, &led_netAct_r.super, &led_netAct_g.super, &led_netAct_b.super, OVR_GW_THREADID_UI);
 
-	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_2, CXA_GPIO_POLARITY_INVERTED, 0);
-	cxa_esp32_gpio_init_output(&gpio_btleRxEnable, GPIO_NUM_12, CXA_GPIO_POLARITY_INVERTED, 1);
-	cxa_esp32_gpio_init_output(&gpio_btleTxEnable, GPIO_NUM_13, CXA_GPIO_POLARITY_NONINVERTED, 1);
+	cxa_esp32_gpio_init_input(&gpio_swProvision, GPIO_NUM_27, CXA_GPIO_POLARITY_INVERTED);
+	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_4, CXA_GPIO_POLARITY_INVERTED, 0);
 
 	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, GPIO_NUM_17, GPIO_NUM_16, false);
 	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super),
@@ -162,7 +160,8 @@ static void sysInit()
 
 	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient), OVR_GW_THREADID_BLUETOOTH);
 	cxa_tempSensor_si7050_init(&tempSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
-	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &led_btleAct.super, &led_netAct.super,
+	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &gpio_swProvision.super,
+						   &led_btleAct.super, &led_netAct.super,
 						   &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
 
 	// schedule our user task for execution

@@ -52,6 +52,7 @@ static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSucce
 // ******** global function implementations ********
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
+							cxa_gpio_t *const gpio_swProvisionIn,
 							cxa_rgbLed_t *const led_btleActIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
@@ -75,7 +76,7 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 	if( rpcNodeIn != NULL ) ovr_beaconGateway_rpcInterface_init(&bgIn->bgri, bgIn, rpcNodeIn);
 
 	// setup our UI
-	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, &bgIn->beaconManager, led_btleActIn, led_netActIn);
+	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, &bgIn->beaconManager, led_btleActIn, led_netActIn, gpio_swProvisionIn);
 
 	// register our console method
 	cxa_console_addCommand("gw_getUuid", "returns gateway's UUID", NULL, 0, consoleCb_getUuid, (void*)bgIn);

@@ -71,6 +71,7 @@ struct ovr_beaconGateway
  */
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
+							cxa_gpio_t *const gpio_swProvisionIn,
 							cxa_rgbLed_t *const led_btleActIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,

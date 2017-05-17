@@ -20,6 +20,7 @@
 
 // ******** includes ********
 #include <cxa_btle_client.h>
+#include <cxa_gpio_longPressManager.h>
 #include <cxa_rgbLed.h>
 #include <ovr_beaconManager.h>
 
@@ -42,6 +43,8 @@ struct ovr_beaconGateway_ui
 	cxa_rgbLed_t* led_btleAct;
 	cxa_rgbLed_t* led_netAct;
 
+	cxa_gpio_longPressManager_t lpm_swProv;
+
 	bool networkError;
 };
 
@@ -49,7 +52,8 @@ struct ovr_beaconGateway_ui
 // ******** global function prototypes ********
 void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
 							   cxa_btle_client_t *const btleClientIn, ovr_beaconManager_t *const bmIn,
-							   cxa_rgbLed_t *const led_btleActIn, cxa_rgbLed_t *const led_netActIn);
+							   cxa_rgbLed_t *const led_btleActIn, cxa_rgbLed_t *const led_netActIn,
+							   cxa_gpio_t *const gpio_swProvIn);
 
 
 #endif
