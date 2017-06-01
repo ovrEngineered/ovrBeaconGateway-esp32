@@ -109,6 +109,12 @@ uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn)
 }
 
 
+void ovr_beaconGateway_onAssert(ovr_beaconGateway_t *const bgIn)
+{
+	ovr_beaconGateway_ui_onAssert(&bgIn->bgui);
+}
+
+
 // ******** local function implementations ********
 static void cb_onRunLoopUpdate(void* userVarIn)
 {
@@ -134,7 +140,7 @@ static void consoleCb_getUuid(cxa_array_t *const argsIn, cxa_ioStream_t *const i
 	ovr_beaconGateway_t* bgIn = (ovr_beaconGateway_t*)userVarIn;
 	cxa_assert(bgIn);
 
-	cxa_ioStream_writeFormattedLine(ioStreamIn, "gateway uuid: %s", cxa_uniqueId_getHexString());
+	cxa_ioStream_writeLine(ioStreamIn, cxa_uniqueId_getHexString());
 }
 
 

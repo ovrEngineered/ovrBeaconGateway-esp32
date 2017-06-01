@@ -83,4 +83,6 @@ bool ovr_beaconGateway_isBeaconRadioReady(ovr_beaconGateway_t *const bgIn);
 float ovr_beaconGateway_getLastTemp_degC(ovr_beaconGateway_t *const bgIn);
 uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn);
 
+void ovr_beaconGateway_onAssert(ovr_beaconGateway_t *const bgIn);
+
 #endif

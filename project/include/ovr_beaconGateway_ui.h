@@ -56,4 +56,6 @@ void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
 							   cxa_gpio_t *const gpio_swProvIn);
 
 
+void ovr_beaconGateway_ui_onAssert(ovr_beaconGateway_ui_t *const bguiIn);
+
 #endif

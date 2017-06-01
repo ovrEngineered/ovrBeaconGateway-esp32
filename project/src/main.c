@@ -21,9 +21,6 @@
 #include "freertos/task.h"
 
 #include "esp_system.h"
-#include "nvs_flash.h"
-
-#include "aws_certs.h"
 
 #include <cxa_assert.h>
 #include <cxa_blueGiga_btle_client.h>
@@ -39,6 +36,7 @@
 #include <cxa_mqtt_connectionManager.h>
 #include <cxa_mqtt_rpc_node_root.h>
 #include <cxa_network_wifiManager.h>
+#include <cxa_nvsManager.h>
 #include <cxa_rgbLed.h>
 #include <cxa_rgbLed_triLed.h>
 #include <cxa_runLoop.h>
@@ -65,6 +63,7 @@ static void sysInit();
 static void thread_network(void *pvParameters);
 static void thread_ui(void *pvParameters);
 static void thread_bluetooth(void *pvParameters);
+static void assertCb();
 
 
 // ******** local variable declarations ********
@@ -103,8 +102,6 @@ static cxa_mqtt_rpc_node_root_t rpcNode_root;
 // ******** global function implementations ********
 void app_main(void)
 {
-    nvs_flash_init();
-
     sysInit();
 }
 
@@ -112,9 +109,13 @@ void app_main(void)
 // ******** local function implementations ********
 static void sysInit()
 {
-	// setup our debug serial console
+	// setup our debug serial port
 	cxa_esp32_usart_init(&usart_debug, UART_NUM_0, 115200, GPIO_NUM_1, GPIO_NUM_3, false);
 	cxa_assert_setIoStream(cxa_usart_getIoStream(&usart_debug.super));
+	cxa_assert_setAssertCb(assertCb);
+
+	// setup our NVS manager
+	cxa_nvsManager_init();
 
 	// setup our timebase
 	cxa_esp32_timeBase_init();
@@ -126,12 +127,8 @@ static void sysInit()
 	// setup our networking
 	cxa_network_wifiManager_init(OVR_GW_THREADID_NETWORK);
 	cxa_sntpClient_init();
-	cxa_mqtt_connManager_init_clientCert(NULL,
-										 MQTT_SERVER, MQTT_PORT,
-										 tls_server_root_cert, sizeof(tls_server_root_cert),
-										 tls_client_cert, sizeof(tls_client_cert),
-										 tls_client_key_private, sizeof(tls_client_key_private),
-										 OVR_GW_THREADID_NETWORK);
+	cxa_mqtt_connManager_init(MQTT_SERVER, MQTT_PORT,
+							  OVR_GW_THREADID_NETWORK);
 	cxa_mqtt_rpc_node_root_init(&rpcNode_root, cxa_mqtt_connManager_getMqttClient(), true, cxa_uniqueId_getHexString());
 
 	// setup our application-specific peripherals
@@ -166,14 +163,14 @@ static void sysInit()
 
 	// schedule our user task for execution
 	xTaskCreate(thread_network, (const char * const)"net", 4096, NULL, tskIDLE_PRIORITY, NULL);
-	xTaskCreate(thread_ui, (const char * const)"ui", 1024, NULL, tskIDLE_PRIORITY, NULL);
+	xTaskCreate(thread_ui, (const char * const)"ui", 2048, NULL, tskIDLE_PRIORITY, NULL);
 	xTaskCreate(thread_bluetooth, (const char * const)"bt", 4096, NULL, tskIDLE_PRIORITY, NULL);
 }
 
 
 static void thread_network(void *pvParameters)
 {
-	cxa_network_wifiManager_startNormal();
+	cxa_network_wifiManager_start();
 
 	// does not return
 	cxa_runLoop_execute(OVR_GW_THREADID_NETWORK);
@@ -191,4 +188,11 @@ static void thread_bluetooth(void *pvParameters)
 {
 	// does not return
 	cxa_runLoop_execute(OVR_GW_THREADID_BLUETOOTH);
+}
+
+
+static void assertCb()
+{
+	vTaskSuspendAll();
+	ovr_beaconGateway_onAssert(&beaconGateway);
 }

@@ -28,6 +28,7 @@
 #define WIFI_RGBCOLOR_UNKNOWN				0,   0,   0
 #define WIFI_RGBCOLOR_ERROR					255, 0,   0
 #define WIFI_RGBCOLOR_PROVISION				0,   255, 0
+#define WIFI_RGBCOLOR_WAIT_CREDS			255, 0,   255
 #define WIFI_RGBCOLOR_CONNECTING			0,   0,   255
 #define WIFI_RGBCOLOR_CONNECTED				0,   0,   255
 #define WIFI_RGBCOLOR_CONNECTED_ACT			0,   0,   0
@@ -37,8 +38,8 @@
 #define BTLE_RGBCOLOR_CONNECTED_ACT  		0,   0,   0
 
 #define BLINKRATE_ERROR						100,  100
-#define BLINKRATE_PROVISION					900,  100
-#define BLINKRATE_PROVISION_LPM				250,  250
+#define BLINKRATE_PROVISION					100,  100
+#define BLINKRATE_WAIT_CREDS				100,  100
 #define BLINKRATE_CONNECTING				250,  250
 
 #define FLASHPERIOD_ACT_MS					100
@@ -98,7 +99,7 @@ void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
 
 	// register for wifi callbacks
 	cxa_network_wifiManager_addListener(NULL, wifiCb_onProvisioning, wifiCb_onAssociating,
-										NULL, NULL, wifiCb_onAssociationFailed, NULL, (void*)bguiIn);
+										NULL, NULL, wifiCb_onAssociationFailed, (void*)bguiIn);
 
 	// register for mqtt client callbacks
 	cxa_mqtt_client_t *mqttC = cxa_mqtt_connManager_getMqttClient();
@@ -114,6 +115,13 @@ void ovr_beaconGateway_ui_init(ovr_beaconGateway_ui_t *const bguiIn,
 
 	// register for beacon activity callbacks
 	ovr_beaconManager_addListener(bmIn, NULL, beaconManagerCb_onBeaconUpdate, NULL, (void*)bguiIn);
+}
+
+
+void ovr_beaconGateway_ui_onAssert(ovr_beaconGateway_ui_t *const bguiIn)
+{
+	cxa_rgbLed_setRgb(bguiIn->led_btleAct, 255, 0, 0);
+	cxa_rgbLed_setRgb(bguiIn->led_netAct, 255, 0, 0);
 }
 
 
@@ -138,6 +146,10 @@ static void updateNetLed(ovr_beaconGateway_ui_t *const bguiIn)
 	else if( bguiIn->networkError )
 	{
 		cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_ERROR, BLINKRATE_ERROR);
+	}
+	else if( !cxa_mqtt_connManager_areCredentialsSet() )
+	{
+		cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_WAIT_CREDS, BLINKRATE_WAIT_CREDS);
 	}
 	else
 	{
@@ -179,7 +191,7 @@ static void lpmCb_onEnter_provision(void* userVarIn)
 	ovr_beaconGateway_ui_t* bguiIn = (ovr_beaconGateway_ui_t*)userVarIn;
 	cxa_assert(bguiIn);
 
-	cxa_rgbLed_blink(bguiIn->led_netAct, WIFI_RGBCOLOR_PROVISION, BLINKRATE_PROVISION_LPM);
+	cxa_rgbLed_setRgb(bguiIn->led_netAct, WIFI_RGBCOLOR_PROVISION);
 }
 
 
