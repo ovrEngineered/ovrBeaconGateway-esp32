@@ -80,6 +80,10 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		snprintf(timestamp_str, sizeof(timestamp_str), "%d", cxa_sntpClient_getUnixTimeStamp());
 		timestamp_str[sizeof(timestamp_str)-1] = 0;
 
+		char variant_str[2];
+		snprintf(variant_str, sizeof(variant_str), "%d", ovr_beaconGateway_getVariant(bgriIn->bg));
+		variant_str[sizeof(variant_str)-1] = 0;
+
 		char isRadioReady_str[2];
 		snprintf(isRadioReady_str, sizeof(isRadioReady_str), "%d", ovr_beaconGateway_isBeaconRadioReady(bgriIn->bg));
 		isRadioReady_str[sizeof(isRadioReady_str)-1] = 0;
@@ -96,7 +100,9 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
 		if( !cxa_stringUtils_concat(notiPayload, "{\"gatewayId\":\"", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, gatewayUniqueId, sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, "\",\"timestamp\":", sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, "\",\"variant\":", sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, variant_str, sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, ",\"timestamp\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, ",\"isBeaconRadioReady\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, isRadioReady_str, sizeof(notiPayload)) ) return;

@@ -53,6 +53,8 @@ static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSucce
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
 							cxa_gpio_t *const gpio_swProvisionIn,
+							cxa_gpio_t *const gpio_variant_internalHighPowerIn,
+							cxa_gpio_t *const gpio_variant_externalIn,
 							cxa_rgbLed_t *const led_btleActIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
@@ -61,6 +63,8 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 {
 	cxa_assert(bgIn);
 	cxa_assert(btleClientIn);
+	cxa_assert(gpio_variant_internalHighPowerIn);
+	cxa_assert(gpio_variant_externalIn);
 
 	bgIn->btleClient = btleClientIn;
 	cxa_logger_init(&bgIn->logger, "beaconGateway");
@@ -68,6 +72,26 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 	bgIn->lightSensor = lightSensorIn;
 	bgIn->tempSensor = tempSensorIn;
 	cxa_timeDiff_init(&bgIn->td_readSensors);
+
+	// determine our variant (gpios should be inverted)
+	if( cxa_gpio_getValue(gpio_variant_internalHighPowerIn) && !cxa_gpio_getValue(gpio_variant_externalIn) )
+	{
+		bgIn->variant = OVR_BEACONGW_VARIANT_INTERNAL_HIGHPOWER;
+	}
+	else if( !cxa_gpio_getValue(gpio_variant_internalHighPowerIn) && cxa_gpio_getValue(gpio_variant_externalIn) )
+	{
+		bgIn->variant = OVR_BEACONGW_VARIANT_EXTERNAL;
+	}
+	else if( !cxa_gpio_getValue(gpio_variant_internalHighPowerIn) && !cxa_gpio_getValue(gpio_variant_externalIn) )
+	{
+		bgIn->variant = OVR_BEACONGW_VARIANT_INTERNAL;
+	}
+	else
+	{
+		bgIn->variant = OVR_BEACONGW_VARIANT_UNKNOWN;
+	}
+	cxa_logger_info(&bgIn->logger, "variant: %d", bgIn->variant);
+
 
 	// setup our beacon manager
 	ovr_beaconManager_init(&bgIn->beaconManager, btleClientIn, rpcNodeIn);
@@ -106,6 +130,14 @@ uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn)
 	cxa_assert(bgIn);
 
 	return (bgIn->lightSensor != NULL) ? cxa_lightSensor_getLastValue_255(bgIn->lightSensor) : 0;
+}
+
+
+ovr_beaconGateway_variant_t ovr_beaconGateway_getVariant(ovr_beaconGateway_t *const bgIn)
+{
+	cxa_assert(bgIn);
+
+	return bgIn->variant;
 }
 
 

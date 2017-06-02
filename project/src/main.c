@@ -86,6 +86,9 @@ static cxa_rgbLed_triLed_t led_netAct;
 static cxa_esp32_gpio_t gpio_btleReset;
 static cxa_esp32_gpio_t gpio_swProvision;
 
+static cxa_esp32_gpio_t gpio_variant_external;
+static cxa_esp32_gpio_t gpio_variant_internalHighPower;
+
 static cxa_esp32_usart_t usart_debug;
 
 static cxa_esp32_usart_t usart_btle;
@@ -151,6 +154,11 @@ static void sysInit()
 	cxa_esp32_gpio_init_input(&gpio_swProvision, GPIO_NUM_27, CXA_GPIO_POLARITY_INVERTED);
 	cxa_esp32_gpio_init_output(&gpio_btleReset, GPIO_NUM_4, CXA_GPIO_POLARITY_INVERTED, 0);
 
+	cxa_esp32_gpio_init_input(&gpio_variant_internalHighPower, GPIO_NUM_18, CXA_GPIO_POLARITY_INVERTED);
+	cxa_esp32_gpio_setPullMode(&gpio_variant_internalHighPower, GPIO_PULLUP_ONLY);
+	cxa_esp32_gpio_init_input(&gpio_variant_external, GPIO_NUM_12, CXA_GPIO_POLARITY_INVERTED);
+	cxa_esp32_gpio_setPullMode(&gpio_variant_external, GPIO_PULLUP_ONLY);
+
 	cxa_esp32_usart_init(&usart_btle, UART_NUM_1, 115200, GPIO_NUM_17, GPIO_NUM_16, false);
 	cxa_blueGiga_btle_client_init(&btleClient, cxa_usart_getIoStream(&usart_btle.super),
 								  &gpio_btleReset.super, OVR_GW_THREADID_BLUETOOTH);
@@ -158,6 +166,7 @@ static void sysInit()
 	cxa_lightSensor_ltr329_init(&lightSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient), OVR_GW_THREADID_BLUETOOTH);
 	cxa_tempSensor_si7050_init(&tempSensor, cxa_blueGiga_btle_client_getI2cMaster(&btleClient));
 	ovr_beaconGateway_init(&beaconGateway, &btleClient.super, &gpio_swProvision.super,
+						   &gpio_variant_internalHighPower.super, &gpio_variant_external.super,
 						   &led_btleAct.super, &led_netAct.super,
 						   &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
 

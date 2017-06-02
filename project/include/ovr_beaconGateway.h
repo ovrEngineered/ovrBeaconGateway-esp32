@@ -46,10 +46,24 @@ typedef struct ovr_beaconGateway ovr_beaconGateway_t;
 
 
 /**
+ * @public
+ */
+typedef enum
+{
+	OVR_BEACONGW_VARIANT_UNKNOWN = 0,
+	OVR_BEACONGW_VARIANT_INTERNAL = 1,
+	OVR_BEACONGW_VARIANT_INTERNAL_HIGHPOWER = 2,
+	OVR_BEACONGW_VARIANT_EXTERNAL = 3
+}ovr_beaconGateway_variant_t;
+
+
+/**
  * @private
  */
 struct ovr_beaconGateway
 {
+	ovr_beaconGateway_variant_t variant;
+
 	cxa_btle_client_t* btleClient;
 	ovr_beaconManager_t beaconManager;
 
@@ -72,6 +86,8 @@ struct ovr_beaconGateway
 void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_btle_client_t *const btleClientIn,
 							cxa_gpio_t *const gpio_swProvisionIn,
+							cxa_gpio_t *const gpio_variant_internalHighPowerIn,
+							cxa_gpio_t *const gpio_variant_externalIn,
 							cxa_rgbLed_t *const led_btleActIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
@@ -82,6 +98,8 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 bool ovr_beaconGateway_isBeaconRadioReady(ovr_beaconGateway_t *const bgIn);
 float ovr_beaconGateway_getLastTemp_degC(ovr_beaconGateway_t *const bgIn);
 uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn);
+
+ovr_beaconGateway_variant_t ovr_beaconGateway_getVariant(ovr_beaconGateway_t *const bgIn);
 
 void ovr_beaconGateway_onAssert(ovr_beaconGateway_t *const bgIn);
 
