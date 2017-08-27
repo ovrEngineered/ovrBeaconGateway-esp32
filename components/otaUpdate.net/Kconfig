@@ -1,0 +1,31 @@
+menuconfig OTA_UPDATE
+    bool "OTAUpdate.net Client"
+    help
+       Select this option to enable support for the OTAUpdate.net client
+
+choice OTA_LOG_LEVEL
+    depends on OTA_UPDATE
+    prompt "OTA Log Level"
+    default OTA_LOG_LEVEL_NONE
+    help
+        Select logging verbosity for OTAUpdate Client
+
+    config OTA_LOG_LEVEL_NONE
+        bool "None"
+    config OTA_LOG_LEVEL_ERROR
+        bool "Error"
+    config OTA_LOG_LEVEL_WARN
+        bool "Warn"
+    config OTA_LOG_LEVEL_INFO
+        bool "Info"
+    config OTA_LOG_LEVEL_DEBUG
+        bool "Debug"
+endchoice
+
+config OTA_LOG_LEVEL
+    int
+    default 0 if OTA_LOG_LEVEL_NONE
+    default 1 if OTA_LOG_LEVEL_ERROR
+    default 2 if OTA_LOG_LEVEL_WARN
+    default 3 if OTA_LOG_LEVEL_INFO
+    default 4 if OTA_LOG_LEVEL_DEBUG

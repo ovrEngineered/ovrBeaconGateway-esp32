@@ -1,3 +1,6 @@
 [submodule "externals/openCXA-common"]
 	path = externals/openCXA-common
 	url = https://github.com/OpenCXA/common-c.git
+[submodule "externals/otaUpdate.net"]
+	path = externals/otaUpdate.net
+	url = https://github.com/otaUpdate/esp32client
