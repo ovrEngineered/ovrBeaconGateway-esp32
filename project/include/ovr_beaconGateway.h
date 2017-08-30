@@ -92,13 +92,12 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
 							cxa_tempSensor_t *const tempSensorIn,
-							cxa_mqtt_rpc_node_t *const rpcNodeIn);
+							cxa_mqtt_rpc_node_t *const rootNodeIn);
 
 
 bool ovr_beaconGateway_isBeaconRadioReady(ovr_beaconGateway_t *const bgIn);
 float ovr_beaconGateway_getLastTemp_degC(ovr_beaconGateway_t *const bgIn);
 uint8_t ovr_beaconGateway_getLastLight_255(ovr_beaconGateway_t *const bgIn);
-
 ovr_beaconGateway_variant_t ovr_beaconGateway_getVariant(ovr_beaconGateway_t *const bgIn);
 
 void ovr_beaconGateway_onAssert(ovr_beaconGateway_t *const bgIn);

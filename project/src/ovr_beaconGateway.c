@@ -31,7 +31,6 @@
 
 // ******** local macro definitions ********
 #define SENSOR_READ_PERIOD_MS		60000
-//#define SENSOR_READ_PERIOD_MS		10000
 
 
 // ******** local type definitions ********
@@ -42,8 +41,8 @@ static void cb_onRunLoopUpdate(void* userVarIn);
 
 static void consoleCb_getUuid(cxa_array_t *const argsIn, cxa_ioStream_t *const ioStreamIn, void* userVarIn);
 
-static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfulIn, float newTemp_degCIn, void* userVarIn);
-static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSuccessfulIn, uint8_t newLight_255In, void* userVarIn);
+static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfulIn, bool valueDidChangeIn, float newTemp_degCIn, void* userVarIn);
+static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSuccessfulIn, bool valueDidChangeIn, uint8_t newLight_255In, void* userVarIn);
 
 
 // ********  local variable declarations *********
@@ -59,7 +58,7 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 							cxa_rgbLed_t *const led_netActIn,
 							cxa_lightSensor_t *const lightSensorIn,
 							cxa_tempSensor_t *const tempSensorIn,
-							cxa_mqtt_rpc_node_t *const rpcNodeIn)
+							cxa_mqtt_rpc_node_t *const rootNodeIn)
 {
 	cxa_assert(bgIn);
 	cxa_assert(btleClientIn);
@@ -94,10 +93,10 @@ void ovr_beaconGateway_init(ovr_beaconGateway_t *const bgIn,
 
 
 	// setup our beacon manager
-	ovr_beaconManager_init(&bgIn->beaconManager, btleClientIn, rpcNodeIn);
+	ovr_beaconManager_init(&bgIn->beaconManager, btleClientIn, rootNodeIn);
 
 	// setup our rpc interface
-	if( rpcNodeIn != NULL ) ovr_beaconGateway_rpcInterface_init(&bgIn->bgri, bgIn, rpcNodeIn);
+	if( rootNodeIn != NULL ) ovr_beaconGateway_rpcInterface_init(&bgIn->bgri, bgIn, rootNodeIn);
 
 	// setup our UI
 	ovr_beaconGateway_ui_init(&bgIn->bgui, btleClientIn, &bgIn->beaconManager, led_btleActIn, led_netActIn, gpio_swProvisionIn);
@@ -153,6 +152,7 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 	ovr_beaconGateway_t* bgIn = (ovr_beaconGateway_t*)userVarIn;
 	cxa_assert(bgIn);
 
+	// read one sensor at a time
 	if( cxa_btle_client_isReady(bgIn->btleClient) && cxa_timeDiff_isElapsed_recurring_ms(&bgIn->td_readSensors, SENSOR_READ_PERIOD_MS) )
 	{
 		if( bgIn->tempSensor != NULL )
@@ -176,21 +176,36 @@ static void consoleCb_getUuid(cxa_array_t *const argsIn, cxa_ioStream_t *const i
 }
 
 
-static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfulIn, float newTemp_degCIn, void* userVarIn)
+static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfulIn, bool valueDidChangeIn, float newTemp_degCIn, void* userVarIn)
 {
 	ovr_beaconGateway_t* bgIn = (ovr_beaconGateway_t*)userVarIn;
 	cxa_assert(bgIn);
 
-	if( !wasSuccessfulIn ) cxa_logger_warn(&bgIn->logger, "failed to read gwTemp");
+	if( wasSuccessfulIn )
+	{
+		ovr_beaconGateway_rpcInterface_notifyTempChanged(&bgIn->bgri, newTemp_degCIn);
+	}
+	else
+	{
+		cxa_logger_warn(&bgIn->logger, "failed to read gwTemp");
+	}
 
+	// now read our light sensor
 	cxa_lightSensor_getValue_withCallback(bgIn->lightSensor, lightCb_onUpdated, (void*)bgIn);
 }
 
 
-static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSuccessfulIn, uint8_t newLight_255In, void* userVarIn)
+static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSuccessfulIn, bool valueDidChangeIn, uint8_t newLight_255In, void* userVarIn)
 {
 	ovr_beaconGateway_t* bgIn = (ovr_beaconGateway_t*)userVarIn;
 	cxa_assert(bgIn);
 
-	if( !wasSuccessfulIn ) cxa_logger_warn(&bgIn->logger, "failed to read gwLux");
+	if( wasSuccessfulIn )
+	{
+		ovr_beaconGateway_rpcInterface_notifyLightChanged(&bgIn->bgri, newLight_255In);
+	}
+	else
+	{
+		cxa_logger_warn(&bgIn->logger, "failed to read gwLux");
+	}
 }

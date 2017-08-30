@@ -43,13 +43,20 @@ typedef struct ovr_beaconGateway ovr_beaconGateway_t;
 struct ovr_beaconGateway_rpcInterface
 {
 	ovr_beaconGateway_t* bg;
-	cxa_mqtt_rpc_node_t* rpcNode;
 
-	cxa_timeDiff_t td_sendUpdate;
+	cxa_mqtt_rpc_node_t* rpcNode_root;
+	cxa_mqtt_rpc_node_t rpcNode_ambient;
+	cxa_mqtt_rpc_node_t rpcNode_ambient_temp;
+	cxa_mqtt_rpc_node_t rpcNode_ambient_light;
+
+	cxa_timeDiff_t td_sendCheckin;
 };
 
 
 // ******** global function prototypes ********
-void ovr_beaconGateway_rpcInterface_init(ovr_beaconGateway_rpcInterface_t *const bgriIn, ovr_beaconGateway_t *const bgIn, cxa_mqtt_rpc_node_t *const rpcNodeIn);
+void ovr_beaconGateway_rpcInterface_init(ovr_beaconGateway_rpcInterface_t *const bgriIn, ovr_beaconGateway_t *const bgIn, cxa_mqtt_rpc_node_t *const rootNodeIn);
+
+void ovr_beaconGateway_rpcInterface_notifyTempChanged(ovr_beaconGateway_rpcInterface_t *const bgriIn, float newTemp_degCIn);
+void ovr_beaconGateway_rpcInterface_notifyLightChanged(ovr_beaconGateway_rpcInterface_t *const bgriIn, uint8_t newLight_255In);
 
 #endif
