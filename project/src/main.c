@@ -44,6 +44,9 @@
 #include <cxa_tempSensor_si7050.h>
 #include <cxa_uniqueId.h>
 
+#include <ota_updateClient.h>
+#include <ota_logging.h>
+
 #include <ovr_beaconGateway.h>
 
 #define CXA_LOG_LEVEL			CXA_LOG_LEVEL_TRACE
@@ -51,8 +54,10 @@
 
 
 // ******** local macro definitions ********
-#define MQTT_SERVER 		"A218ORPUJ66O9J.iot.us-east-1.amazonaws.com"
-#define MQTT_PORT 			8883
+#define MQTT_SERVER			"a2vs7wsoau655j.iot.us-east-2.amazonaws.com"
+#define MQTT_PORT			8883
+
+#define FW_UUID				"2ba41f5b-9381-4a7c-a97c-c9eed6333f37"
 
 
 // ******** local type definitions *******
@@ -64,6 +69,7 @@ static void thread_network(void *pvParameters);
 static void thread_ui(void *pvParameters);
 static void thread_bluetooth(void *pvParameters);
 static void assertCb();
+static void otaUpdate_log(void *userVarIn, int otaLogLevelIn, const char *const tagIn, const char *const fmtIn, va_list argsIn);
 
 
 // ******** local variable declarations ********
@@ -170,6 +176,10 @@ static void sysInit()
 						   &led_btleAct.super, &led_netAct.super,
 						   &lightSensor.super, &tempSensor.super, &rpcNode_root.super);
 
+	// initialize our otaUpdate client
+	ota_updateClient_init(FW_UUID, cxa_uniqueId_getHexString());
+	ota_updateClient_setLogFunction(otaUpdate_log, NULL);
+
 	// schedule our user task for execution
 	xTaskCreate(thread_network, (const char * const)"net", 4096, NULL, tskIDLE_PRIORITY, NULL);
 	xTaskCreate(thread_ui, (const char * const)"ui", 2048, NULL, tskIDLE_PRIORITY, NULL);
@@ -204,4 +214,38 @@ static void assertCb()
 {
 	vTaskSuspendAll();
 	ovr_beaconGateway_onAssert(&beaconGateway);
+}
+
+
+static void otaUpdate_log(void *userVarIn, int otaLogLevelIn, const char *const tagIn, const char *const fmtIn, va_list argsIn)
+{
+	static cxa_logger_t logger;
+	static bool isInit = false;
+	if( !isInit )
+	{
+		cxa_logger_init(&logger, "otaUpdate");
+		isInit = true;
+	}
+
+	int logLevel = CXA_LOG_LEVEL_NONE;
+	switch( otaLogLevelIn )
+	{
+		case OTA_LOG_LEVEL_ERROR:
+			logLevel = CXA_LOG_LEVEL_ERROR;
+			break;
+
+		case OTA_LOG_LEVEL_WARN:
+			logLevel = CXA_LOG_LEVEL_WARN;
+			break;
+
+		case OTA_LOG_LEVEL_INFO:
+			logLevel = CXA_LOG_LEVEL_INFO;
+			break;
+
+		case OTA_LOG_LEVEL_DEBUG:
+			logLevel = CXA_LOG_LEVEL_DEBUG;
+			break;
+	}
+
+	cxa_logger_log_varArgs(&logger, logLevel, fmtIn, argsIn);
 }
