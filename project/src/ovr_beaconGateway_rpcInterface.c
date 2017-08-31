@@ -88,9 +88,9 @@ void ovr_beaconGateway_rpcInterface_notifyTempChanged(ovr_beaconGateway_rpcInter
 	value_str[sizeof(value_str)-1] = 0;
 
 	char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
-	if( !cxa_stringUtils_concat(notiPayload, "{\"timestamp_local\":", sizeof(notiPayload)) ) return;
+	if( !cxa_stringUtils_concat(notiPayload, "{\"timestamp_s_local\":", sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, ",\"value\":", sizeof(notiPayload)) ) return;
+	if( !cxa_stringUtils_concat(notiPayload, ",\"value_num\":", sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, value_str, sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
 
@@ -111,9 +111,9 @@ void ovr_beaconGateway_rpcInterface_notifyLightChanged(ovr_beaconGateway_rpcInte
 	value_str[sizeof(value_str)-1] = 0;
 
 	char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
-	if( !cxa_stringUtils_concat(notiPayload, "{\"timestamp_local\":", sizeof(notiPayload)) ) return;
+	if( !cxa_stringUtils_concat(notiPayload, "{\"timestamp_s_local\":", sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
-	if( !cxa_stringUtils_concat(notiPayload, ",\"value\":", sizeof(notiPayload)) ) return;
+	if( !cxa_stringUtils_concat(notiPayload, ",\"value_num\":", sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, value_str, sizeof(notiPayload)) ) return;
 	if( !cxa_stringUtils_concat(notiPayload, "}", sizeof(notiPayload)) ) return;
 
@@ -145,7 +145,7 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 		char notiPayload[UPDATE_MAX_PAYLOAD_BYTES] = "";
 		if( !cxa_stringUtils_concat(notiPayload, "{\"variant\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, variant_str, sizeof(notiPayload)) ) return;
-		if( !cxa_stringUtils_concat(notiPayload, ",\"timestamp_local\":", sizeof(notiPayload)) ) return;
+		if( !cxa_stringUtils_concat(notiPayload, ",\"timestamp_s_local\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, timestamp_str, sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, ",\"isBeaconRadioReady\":", sizeof(notiPayload)) ) return;
 		if( !cxa_stringUtils_concat(notiPayload, isRadioReady_str, sizeof(notiPayload)) ) return;
