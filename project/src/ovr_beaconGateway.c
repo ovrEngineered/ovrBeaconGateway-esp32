@@ -183,6 +183,7 @@ static void tempCb_onUpdated(cxa_tempSensor_t *const tmpSnsIn, bool wasSuccessfu
 
 	if( wasSuccessfulIn )
 	{
+		// always send data
 		ovr_beaconGateway_rpcInterface_notifyTempChanged(&bgIn->bgri, newTemp_degCIn);
 	}
 	else
@@ -202,6 +203,7 @@ static void lightCb_onUpdated(cxa_lightSensor_t *const lightSnsIn, bool wasSucce
 
 	if( wasSuccessfulIn )
 	{
+		// always send data
 		ovr_beaconGateway_rpcInterface_notifyLightChanged(&bgIn->bgri, newLight_255In);
 	}
 	else

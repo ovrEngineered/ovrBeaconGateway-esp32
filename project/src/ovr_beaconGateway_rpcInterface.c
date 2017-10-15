@@ -42,7 +42,6 @@
 
 // ******** local function prototypes ********
 static void cb_onRunLoopUpdate(void* userVarIn);
-static void cb_onMqttConnect(cxa_mqtt_client_t *const clientIn, void* userVarIn);
 
 
 // ********  local variable declarations *********
@@ -68,9 +67,6 @@ void ovr_beaconGateway_rpcInterface_init(ovr_beaconGateway_rpcInterface_t *const
 
 	// register for runloop updates
 	cxa_runLoop_addEntry(OVR_GW_THREADID_NETWORK, cb_onRunLoopUpdate, (void*)bgriIn);
-
-	// register for mqtt updates
-	cxa_mqtt_client_addListener(cxa_mqtt_rpc_node_getClient(rootNodeIn), cb_onMqttConnect, NULL, NULL, NULL, (void*)bgriIn);
 
 }
 
@@ -153,17 +149,4 @@ static void cb_onRunLoopUpdate(void* userVarIn)
 
 		cxa_mqtt_rpc_node_publishNotification(bgriIn->rpcNode_root, "checkIn", CXA_MQTT_QOS_ATMOST_ONCE, notiPayload, strlen(notiPayload));
 	}
-}
-
-
-static void cb_onMqttConnect(cxa_mqtt_client_t *const clientIn, void* userVarIn)
-{
-	ovr_beaconGateway_rpcInterface_t* bgriIn = (ovr_beaconGateway_rpcInterface_t*)userVarIn;
-	cxa_assert(bgriIn);
-
-	uint8_t lastLight_255 = ovr_beaconGateway_getLastLight_255(bgriIn->bg);
-	ovr_beaconGateway_rpcInterface_notifyLightChanged(bgriIn, lastLight_255);
-
-	float lastTemp_c = ovr_beaconGateway_getLastTemp_degC(bgriIn->bg);
-	ovr_beaconGateway_rpcInterface_notifyTempChanged(bgriIn, lastTemp_c);
 }
